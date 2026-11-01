@@ -36,7 +36,7 @@ describe("order history", () => {
     }
   });
 
-  it("numbers about nine thousand orders oldest first, all within the last 30 days", () => {
+  it("numbers thousands of orders oldest first, all within the last 30 days", () => {
     expect(history.orders.length).toBeGreaterThan(8_000);
     expect(history.orders[0]?.id).toBe("ord_h00001");
     const ages = history.orders.map((order) => order.agoMs);

@@ -16,7 +16,7 @@ sandbox that lives in one browser tab. That raised four questions:
 
 **The data**
 
-- **History is generated, not stored.** About 9,000 orders from the 30 days before
+- **History is generated, not stored.** About 9,000 orders (about 11,000 since the catalogue grew to ten events, [023](023-a-box-office-first.md)) from the 30 days before
   the sandbox started come from a seed, like the concert hall's sold seats. That many
   orders would overflow the sandbox's storage and slow every save.
   - The history agrees with the catalogue: fulfilled tickets add up to each tier's

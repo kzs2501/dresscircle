@@ -14,7 +14,7 @@ import { OrganiserShell } from "./organiser-shell";
 import { Overview } from "./overview";
 
 /**
- * The organisers' dashboard, signed in to the story's own sandbox: about 9,000 orders
+ * The organisers' dashboard, signed in to the story's own sandbox: about 11,000 orders
  * of generated history, served by the same handlers as the app, with the live stream
  * open. Each page is shown inside the shell, as the app shows it.
  */
