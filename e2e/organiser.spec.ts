@@ -25,7 +25,7 @@ test("overview: sign in, and see the festival's tickets sold", async ({ page, or
   await page.getByRole("link", { name: /organisers/i }).click();
   await expect(page).toHaveURL(/\/organiser\/sign-in$/);
   await organiser.signInAs(/Nandini Rao/);
-  await page.getByLabel("Show").selectOption({ label: "Lakeside Lights Festival" });
+  await page.getByRole("combobox", { name: /^Show/ }).selectOption({ label: "Lakeside Lights Festival" });
   await expect(page).toHaveURL(/\?event=lakeside-lights$/);
   const sold = getEvent("lakeside-lights").tiers.reduce((sum, tier) => sum + tier.baselineSold, 0);
   await expect(organiser.kpi("Tickets sold")).toHaveText(formatCount(sold));
