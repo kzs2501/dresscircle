@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CHAOS } from "@/backend/chaos/presets";
+import { DEFAULT_CHAOS, PRESET_IDS } from "@/backend/chaos/presets";
 import { CATALOG } from "@/core/catalog";
 import {
   createTestBackend,
@@ -11,6 +11,7 @@ import {
   testAttendees,
   testCard,
   valueOf,
+  START_MS,
 } from "@/backend/testing/fixtures";
 
 const ceramics = (quantity: number) => ({
@@ -80,6 +81,35 @@ describe("inventory", () => {
     expect(backend.available(tierId ?? "")).toBe((before.get(tierId ?? "") ?? 0) - 1);
     expect(before.get(tierId ?? "")).toBeGreaterThan(3); // never one that's nearly gone
     expect(backend.available("nmj-standing")).toBe(2);
+  });
+});
+
+describe("simulated buyers, now and then", () => {
+  it("buy one ticket quietly on the happy path, from a tier with plenty left", () => {
+    const { backend } = createTestBackend("happy");
+    const logBefore = backend.getState().log.length;
+    expect(backend.runAmbientTick()).toBe(true);
+    const [sale] = backend.getState().liveSales;
+    expect(sale?.quantity).toBe(1);
+    expect(backend.getState().log.length).toBe(logBefore); // the log stays the visitor's own
+  });
+
+  it("stay out of every scenario in the Chaos panel", () => {
+    for (const preset of PRESET_IDS.filter((id) => id !== "happy")) {
+      const { backend } = createTestBackend(preset);
+      expect(backend.runAmbientTick(), preset).toBe(false);
+    }
+  });
+
+  it("start a new sandbox with a few sales from the last minutes, once", () => {
+    const { backend } = createTestBackend("happy");
+    backend.backfillAmbientCrowd();
+    const sales = backend.getState().liveSales;
+    expect(sales).toHaveLength(4);
+    for (const sale of sales) expect(sale.atMs).toBeLessThan(START_MS);
+    expect(sales.map((sale) => sale.atMs)).toEqual([...sales.map((sale) => sale.atMs)].sort((a, b) => a - b));
+    backend.backfillAmbientCrowd();
+    expect(backend.getState().liveSales).toHaveLength(4);
   });
 });
 

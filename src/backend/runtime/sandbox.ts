@@ -10,6 +10,7 @@
 import { createBackend, type Backend } from "@/backend/backend";
 import { createInitialState, deserializeState, SANDBOX_STORAGE_KEY, serializeState } from "@/backend/domain/state";
 import { signDemoTicket } from "@/core/demo-ticket-key";
+import { STORAGE_KEYS } from "@/core/persisted-names";
 
 let sandboxInstance: Backend | null = null;
 
@@ -40,14 +41,26 @@ function save(sandbox: Backend) {
   }
 }
 
+/** End-to-end tests keep the simulated buyers out, so stock moves only when a test moves it. */
+function isCrowdQuiet() {
+  try {
+    return sessionStorage.getItem(STORAGE_KEYS.quietCrowd) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Keeps time-based behaviour running: delivers webhooks when they're due, and lets
- * the crowd buy tickets while that preset is on.
+ * Keeps time-based behaviour running: delivers webhooks when they're due, lets the crowd
+ * buy tickets while that preset is on, and the simulated buyers now and then.
  */
 function startRuntime(sandbox: Backend) {
   let webhookTimer: ReturnType<typeof setTimeout> | undefined;
   let crowdTimer: ReturnType<typeof setInterval> | undefined;
   let crowdIntervalMs = 0;
+  let ambientTimer: ReturnType<typeof setInterval> | undefined;
+  let ambientIntervalMs = 0;
+  const isQuiet = isCrowdQuiet();
 
   const schedule = () => {
     clearTimeout(webhookTimer);
@@ -64,12 +77,20 @@ function startRuntime(sandbox: Backend) {
       crowdTimer = wanted ? setInterval(() => sandbox.runCrowdTick(), wanted) : undefined;
       crowdIntervalMs = wanted;
     }
+
+    const ambient = isQuiet ? 0 : (sandbox.chaos().ambientCrowdIntervalMs ?? 0);
+    if (ambient !== ambientIntervalMs) {
+      clearInterval(ambientTimer);
+      ambientTimer = ambient ? setInterval(() => sandbox.runAmbientTick(), ambient) : undefined;
+      ambientIntervalMs = ambient;
+    }
   };
 
   sandbox.subscribe(() => {
     save(sandbox);
     schedule();
   });
+  if (!isQuiet) sandbox.backfillAmbientCrowd();
   schedule(); // resume: deliver anything that came due while the page was closed
 }
 

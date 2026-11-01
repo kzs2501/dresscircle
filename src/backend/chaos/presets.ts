@@ -32,6 +32,11 @@ export interface ChaosConfig {
   isCrowdEnabled: boolean;
   /** How often one of them buys a ticket in the background. */
   crowdIntervalMs: number;
+  /**
+   * Other buyers, simulated, now and then: a ticket every so often, so the box office
+   * is never empty. Unlike the crowd above, they never take the last tickets. Null: none.
+   */
+  ambientCrowdIntervalMs: number | null;
   /** Lose the response to an order's first charge: the server did the work, the browser never hears. */
   shouldDropFirstPaymentResponse: boolean;
   /** Lose this many order-status responses after the first, as a flaky connection would. */
@@ -93,6 +98,7 @@ export const DEFAULT_CHAOS: ChaosConfig = {
   shouldExpireHoldDuringPayment: false,
   isCrowdEnabled: false,
   crowdIntervalMs: 6_000,
+  ambientCrowdIntervalMs: null,
   shouldDropFirstPaymentResponse: false,
   droppedStatusChecks: 0,
   shouldSnatchRequestedSeat: false,
@@ -110,8 +116,9 @@ type PresetDefinition = Omit<Preset, "id" | "config"> & { config?: Partial<Chaos
 const DEFINITIONS: Record<PresetId, PresetDefinition> = {
   happy: {
     label: "Happy path",
-    description: "Everything works, with realistic latency.",
+    description: "Everything works, with realistic latency, and other buyers (simulated) now and then.",
     expectation: "Confirming… for about a second, then your tickets.",
+    config: { ambientCrowdIntervalMs: 20_000 },
   },
   declined: {
     label: "Declined card",

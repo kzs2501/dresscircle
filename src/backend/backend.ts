@@ -26,6 +26,7 @@ import {
   findHold,
   findSeatAvailability,
   hasItsTicketsInSandbox,
+  runAmbientTick,
   runCrowdTick,
   type CreateHoldCommand,
 } from "./domain/inventory";
@@ -303,6 +304,20 @@ export function createBackend(deps: Deps, initialState: ServerState = createInit
       const hasBought = runCrowdTick(context);
       if (hasBought) notify();
       return hasBought;
+    },
+    /** Simulated buyers now and then, while the happy preset is on. */
+    runAmbientTick() {
+      const hasBought = runAmbientTick(context);
+      if (hasBought) notify();
+      return hasBought;
+    },
+    /** A few simulated sales from the last minutes, so a new sandbox's box office isn't empty. */
+    backfillAmbientCrowd(count = 4, spanMs = 8 * 60_000) {
+      if (context.state.liveSales.length > 0) return;
+      const nowMs = deps.now();
+      let hasBought = false;
+      for (let i = count; i >= 1; i--) hasBought = runAmbientTick(context, nowMs - (i * spanMs) / count) || hasBought;
+      if (hasBought) notify();
     },
 
     available: (tierId: string) => availableQuantity(context, tierId),

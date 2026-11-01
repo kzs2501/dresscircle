@@ -16,6 +16,7 @@ describe("persisted names", () => {
     expect(STORAGE_KEYS.queue("monsoon-strings")).toBe("admit-one:queue:monsoon-strings");
     expect(STORAGE_KEYS.organiserSession).toBe("admit-one:organiser-session");
     expect(STORAGE_KEYS.doorEvent).toBe("admit-one:door-event");
+    expect(STORAGE_KEYS.quietCrowd).toBe("admit-one:quiet-crowd");
   });
 
   it("keep the IndexedDB databases devices already hold", () => {

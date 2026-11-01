@@ -10,6 +10,7 @@ import { SANDBOX_STORAGE_KEY, type ServerState } from "../src/backend/domain/sta
 import { seatAvailabilityDtoSchema } from "../src/contract/dto";
 import postgres from "postgres";
 import { CATALOG, getSeatPlan } from "../src/core/catalog";
+import { STORAGE_KEYS } from "../src/core/persisted-names";
 import { findSingleSeatGaps, type Seat } from "../src/core/seating";
 import type { TestCardLabel } from "../src/features/checkout/domain/test-cards";
 
@@ -198,11 +199,32 @@ async function restoreCatalogueStock(databaseUrl: string) {
 }
 
 export const test = base.extend<
-  { buyer: Buyer; sandbox: Sandbox; organiser: Organiser; freshStock: undefined },
+  {
+    buyer: Buyer;
+    sandbox: Sandbox;
+    organiser: Organiser;
+    freshStock: undefined;
+    isCrowdQuiet: boolean;
+    quietCrowd: undefined;
+  },
   { databaseUrl: string | null }
 >({
   // Set by the server-mode config; null for the sandbox, which is fresh in every test anyway.
   databaseUrl: [null, { option: true, scope: "worker" }],
+  // The sandbox's simulated buyers would move stock under a test's feet: off, unless a
+  // test turns them on with `test.use({ isCrowdQuiet: false })`.
+  isCrowdQuiet: [true, { option: true }],
+  quietCrowd: [
+    async ({ context, isCrowdQuiet }, provide) => {
+      if (isCrowdQuiet) {
+        await context.addInitScript((key) => {
+          sessionStorage.setItem(key, "1");
+        }, STORAGE_KEYS.quietCrowd);
+      }
+      await provide(undefined);
+    },
+    { auto: true },
+  ],
   freshStock: [
     async ({ databaseUrl }, provide) => {
       if (databaseUrl) await restoreCatalogueStock(databaseUrl);

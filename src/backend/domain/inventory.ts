@@ -129,18 +129,35 @@ export function describeSeats(seats: readonly Seat[]) {
 export const LIVE_SALES_LIMIT = 5_000;
 
 /** Another buyer's sale, as an order the organiser will see. */
-function recordLiveSale(context: BackendContext, tierId: string, quantity: number, seatIds: readonly string[]) {
+function recordLiveSale(
+  context: BackendContext,
+  tierId: string,
+  quantity: number,
+  seatIds: readonly string[],
+  atMs = context.deps.now(),
+) {
   const { liveSales } = context.state;
   liveSales.push({
     seq: (liveSales.at(-1)?.seq ?? 0) + 1,
     tierId,
     quantity,
     seatIds: [...seatIds],
-    atMs: context.deps.now(),
+    atMs,
   });
 }
 
-function sellSeatsToCrowd(context: BackendContext, seats: readonly Seat[], why: string) {
+/** When a crowd sale happened (now, unless it's backfilled), and whether the log says so. */
+interface CrowdSaleOptions {
+  atMs?: number | undefined;
+  isQuiet?: boolean;
+}
+
+function sellSeatsToCrowd(
+  context: BackendContext,
+  seats: readonly Seat[],
+  why: string,
+  { atMs, isQuiet = false }: CrowdSaleOptions = {},
+) {
   const [first] = seats;
   if (!first) return;
   context.state.soldSeatIds.push(...seats.map((seat) => seat.id));
@@ -149,23 +166,30 @@ function sellSeatsToCrowd(context: BackendContext, seats: readonly Seat[], why: 
     first.tierId,
     seats.length,
     seats.map((seat) => seat.id),
+    atMs,
   );
-  context.log("crowd", `Another buyer took ${describeSeats(seats)} (${why}).`);
+  if (!isQuiet) context.log("crowd", `Another buyer took ${describeSeats(seats)} (${why}).`);
 }
 
 /** The crowd buys outright (no checkout of their own) — the best seats left, for reserved seating. */
-function recordCrowdPurchase(context: BackendContext, tierId: string, quantity: number, why: string) {
+function recordCrowdPurchase(
+  context: BackendContext,
+  tierId: string,
+  quantity: number,
+  why: string,
+  options: CrowdSaleOptions = {},
+) {
   const found = findTier(tierId);
   if (!found) return;
   const { event, tier } = found;
   if (isReservedEvent(event)) {
     const unavailable = unavailableSeatIds(context, event);
-    sellSeatsToCrowd(context, chooseBestSeats(event.seating.plan, unavailable, tierId, quantity) ?? [], why);
+    sellSeatsToCrowd(context, chooseBestSeats(event.seating.plan, unavailable, tierId, quantity) ?? [], why, options);
     return;
   }
   context.state.sold[tierId] = (context.state.sold[tierId] ?? 0) + quantity;
-  recordLiveSale(context, tierId, quantity, []);
-  context.log("crowd", `Another buyer took ${quantity} × ${tier.name} (${why}).`);
+  recordLiveSale(context, tierId, quantity, [], options.atMs);
+  if (!options.isQuiet) context.log("crowd", `Another buyer took ${quantity} × ${tier.name} (${why}).`);
 }
 
 export const soldOut = (tierId: string, left: number): DomainError => ({
@@ -312,6 +336,24 @@ export function findSeatAvailability(context: BackendContext, eventSlug: string)
   if (!event) return fail({ code: "not_found", detail: "No such event." });
   if (!isReservedEvent(event)) return fail({ code: "not_found", detail: "This event has no reserved seats." });
   return ok([...unavailableSeatIds(context, event)]);
+}
+
+/**
+ * Simulated buyers now and then (the happy preset's), so the box office is never empty:
+ * one ticket, from a tier with plenty left, never the last few. Quiet in the log, which
+ * stays the visitor's own; the home page's feed marks them as simulated.
+ */
+export function runAmbientTick(context: BackendContext, atMs?: number): boolean {
+  if (context.chaos().ambientCrowdIntervalMs === null || context.state.liveSales.length >= LIVE_SALES_LIMIT) {
+    return false;
+  }
+  const candidates = CATALOG.flatMap((event) => event.tiers).filter(
+    (tier) => availableQuantity(context, tier.id) > CROWD_BACKGROUND_ABOVE,
+  );
+  const tier = candidates[Math.floor(context.deps.random() * candidates.length)];
+  if (!tier) return false;
+  recordCrowdPurchase(context, tier.id, 1, "simulated", { atMs, isQuiet: true });
+  return true;
 }
 
 /** Background buying, so availability visibly moves while the crowd preset is on. */

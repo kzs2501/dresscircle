@@ -15,6 +15,8 @@ export const STORAGE_KEYS = {
   queue: (eventSlug: string) => `${PREFIX}:queue:${eventSlug}`,
   organiserSession: `${PREFIX}:organiser-session`,
   doorEvent: `${PREFIX}:door-event`,
+  /** Set by end-to-end tests: no simulated buyers in this tab. */
+  quietCrowd: `${PREFIX}:quiet-crowd`,
 } as const;
 
 /** IndexedDB databases. */
