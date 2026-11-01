@@ -9,6 +9,7 @@ import { getSeatPlan } from "@/core/catalog";
 import { DEMO_TICKET_KEY_ID, DEMO_TICKET_PUBLIC_KEY } from "@/core/demo-ticket-key";
 import { ticketKeyFrom, verifyTicket } from "@/core/ticket-token";
 import {
+  activityDtoSchema,
   eventDtoSchema,
   holdDetailsDtoSchema,
   orderDtoSchema,
@@ -230,6 +231,31 @@ export function describeBuyerContract(backendName: string, createHarness: () => 
           claims: { code: ticket.code, eventSlug: after.eventSlug, attendeeName: ticket.attendeeName },
         });
       }
+    });
+
+    // Counted as changes, not totals: on Postgres every test in the file shares one database.
+    it("tells anyone what the box office is doing: a hold, then a sale", async () => {
+      const activity = async () => activityDtoSchema.parse(await (await call("/api/activity")).json());
+      const before = await activity();
+      const { id } = await order(2);
+      const held = await activity();
+      expect(held.heldNow).toBe(before.heldNow + 2);
+      expect(held.recent).toContainEqual(
+        expect.objectContaining({
+          kind: "held",
+          eventSlug: "frontend-systems-summit",
+          quantity: 2,
+          isSimulated: false,
+        }),
+      );
+
+      await post(`/api/orders/${id}/payments`, card(), newKey());
+      api.advance(WEBHOOK_DELAY_MS);
+      await api.settle();
+      const sold = await activity();
+      expect(sold.soldToday).toBe(before.soldToday + 2);
+      expect(sold.recent[0]).toMatchObject({ kind: "sold", eventSlug: "frontend-systems-summit", quantity: 2 });
+      expect(sold.lastSaleAt).toBe(sold.recent[0]?.at);
     });
 
     it("keeps the tickets of a payment confirmed in time, however late its webhook is delivered", async () => {

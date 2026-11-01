@@ -22,6 +22,7 @@ export interface KitPort {
 /** The buyer's API: events, seats, holds, orders and payments. */
 export const BUYER_METHODS = [
   "listEvents",
+  "getRecentActivity",
   "getEvent",
   "getSeatAvailability",
   "createHold",

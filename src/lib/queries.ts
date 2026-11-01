@@ -35,6 +35,22 @@ export function shouldShowQueryError(data: unknown, error: unknown): boolean {
   return data === undefined || !isTransientError(error);
 }
 
+declare module "@tanstack/react-query" {
+  interface Register {
+    queryMeta: {
+      /** A feed that's only decoration: when a refresh fails, keep the last update without a toast. */
+      isQuietOnError?: boolean;
+    };
+  }
+}
+
+/** What the box office is doing right now: the home page's live feed. */
+export const activityQueries = {
+  all: () => ["activity"] as const,
+  live: () =>
+    queryOptions({ queryKey: activityQueries.all(), queryFn: apiClient.getActivity, meta: { isQuietOnError: true } }),
+};
+
 export const eventQueries = {
   all: () => ["events"] as const,
   list: () => queryOptions({ queryKey: [...eventQueries.all(), "list"], queryFn: apiClient.listEvents }),

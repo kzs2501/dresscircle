@@ -4,6 +4,8 @@
  */
 export const API_ROUTES = {
   listEvents: "/api/events",
+  /** What the box office is doing right now: public, with no ids or names in it. */
+  getActivity: "/api/activity",
   getEvent: "/api/events/:slug",
   getSeatAvailability: "/api/events/:slug/seats",
   joinQueue: "/api/events/:slug/queue",

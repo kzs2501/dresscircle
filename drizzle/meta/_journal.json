@@ -71,6 +71,13 @@
       "when": 1793015601165,
       "tag": "0009_provider_commands",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793526614120,
+      "tag": "0010_activity_indexes",
+      "breakpoints": true
     }
   ]
 }

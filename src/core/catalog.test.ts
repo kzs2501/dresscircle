@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { CATALOG, findEvent, getEvent } from "./catalog";
+import { CATALOG, CATALOG_TIME_ZONE, findEvent, getEvent } from "./catalog";
 import { ORGANISATIONS } from "./organisations";
 
 describe("catalogue", () => {
@@ -43,7 +43,7 @@ describe("catalogue", () => {
 
   // "Sold today" and the box office's day are counted in one zone.
   it("holds every event in one time zone", () => {
-    expect(new Set(CATALOG.map((event) => event.timeZone))).toEqual(new Set(["Asia/Kolkata"]));
+    expect(new Set(CATALOG.map((event) => event.timeZone))).toEqual(new Set([CATALOG_TIME_ZONE]));
   });
 
   it("finds events by slug, and throws only from getEvent", () => {

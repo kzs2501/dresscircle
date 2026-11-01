@@ -117,8 +117,9 @@ export function createKit(
   const resultReply = <T>(result: Result<T>, request: Request, toBody: (value: T) => JsonValue, status = 200): Reply =>
     result.ok ? { status, body: toBody(result.value) } : problemReply(result.error, request);
 
-  const send = (request: Request, { status, body, headers = {} }: Reply) => {
-    backend.log("request", `${request.method} ${pathOf(request)} → ${String(status)}`);
+  /** `isQuiet`: a poll the page makes on its own, which would push the visitor's own requests out of the log. */
+  const send = (request: Request, { status, body, headers = {} }: Reply, { isQuiet = false } = {}) => {
+    if (!isQuiet) backend.log("request", `${request.method} ${pathOf(request)} → ${String(status)}`);
     return status >= 400
       ? HttpResponse.json(body, { status, headers: { ...headers, "Content-Type": PROBLEM_CONTENT_TYPE } })
       : HttpResponse.json(body, { status, headers });

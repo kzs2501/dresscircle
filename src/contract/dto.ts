@@ -12,6 +12,7 @@ import { PERMISSIONS, ROLES } from "@/core/organisations";
 import { TAX_LINE_KINDS } from "@/core/pricing";
 import { SEAT_ID_PATTERN } from "@/core/seating";
 import {
+  ACTIVITY_KINDS,
   EVENT_CATEGORIES,
   HOLD_STATUSES,
   ORDER_STATUSES,
@@ -227,6 +228,30 @@ export const seatAvailabilityDtoSchema = z.object({
   serverTime: isoDateTimeSchema,
 });
 
+/** One thing the box office did: who and which order are never in it, only what and when. */
+export const activityEntryDtoSchema = z.object({
+  kind: z.enum(ACTIVITY_KINDS),
+  eventSlug: z.string(),
+  tierName: z.string(),
+  quantity: z.number().int().positive(),
+  at: isoDateTimeSchema,
+  /** Bought by the sandbox's simulated crowd, not by a visitor. */
+  isSimulated: z.boolean(),
+});
+
+export const activityDtoSchema = z.object({
+  serverTime: isoDateTimeSchema,
+  /** "Today" is counted in this zone. */
+  timeZone: z.string(),
+  heldNow: z.number().int().nonnegative(),
+  /** People in a sale's waiting room; null when no sale has one. */
+  queuing: z.number().int().nonnegative().nullable(),
+  soldToday: z.number().int().nonnegative(),
+  lastSaleAt: isoDateTimeSchema.nullable(),
+  /** Newest first, at most ten. */
+  recent: z.array(activityEntryDtoSchema),
+});
+
 export const permissionSchema = z.enum(PERMISSIONS);
 
 /** Who's signed in to the organisers' dashboard, and what they may do. */
@@ -359,6 +384,8 @@ export type TierDto = z.infer<typeof tierDtoSchema>;
 export type SeatDto = z.infer<typeof seatDtoSchema>;
 export type SeatingDto = z.infer<typeof seatingDtoSchema>;
 export type SeatAvailabilityDto = z.infer<typeof seatAvailabilityDtoSchema>;
+export type ActivityEntryDto = z.infer<typeof activityEntryDtoSchema>;
+export type ActivityDto = z.infer<typeof activityDtoSchema>;
 export type QueueEntryDto = z.infer<typeof queueEntryDtoSchema>;
 export type AddOnDto = z.infer<typeof addOnDtoSchema>;
 export type EventDto = z.infer<typeof eventDtoSchema>;

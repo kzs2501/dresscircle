@@ -14,6 +14,7 @@ import type { OrderFilters, OrderListParams } from "@/contract/queries";
 import { authenticate, eventFor, eventsFor, signIn, signOut } from "./domain/access";
 import type { RefundReason } from "@/core/statuses";
 import { salesMetrics, type SalesMetrics } from "./domain/metrics";
+import { recentActivity, type ActivityView } from "./domain/activity";
 import { requestRefund } from "./domain/refunds";
 import { activityOf, findOrganiserOrder, listOrders, queryOrders } from "./domain/reporting";
 import type { BackendContext, Deps } from "./domain/context";
@@ -151,6 +152,8 @@ export function createBackend(deps: Deps, initialState: ServerState = createInit
     },
 
     listEvents: (): EventView[] => CATALOG.map((event) => toEventView(context, event)),
+    /** What the box office is doing right now, for the home page. */
+    getRecentActivity: (): ActivityView => recentActivity(context),
     getEvent(slug: string): Result<EventView> {
       const event = findEvent(slug);
       return event ? ok(toEventView(context, event)) : fail({ code: "not_found", detail: "No such event." });

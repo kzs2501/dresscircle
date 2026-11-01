@@ -8,6 +8,7 @@ import { setupServer } from "msw/node";
 import { createBackend } from "@/backend/backend";
 import { createInitialState } from "@/backend/domain/state";
 import {
+  activityDtoSchema,
   eventDtoSchema,
   holdDetailsDtoSchema,
   orderDtoSchema,
@@ -18,7 +19,7 @@ import {
 import { PROBLEM_CONTENT_TYPE, problemSchema } from "@/contract/problems";
 import { IDEMPOTENCY_KEY_HEADER, QUEUE_TOKEN_HEADER } from "@/contract/routes";
 import { freeSeatRun, gapMakingSelection, SEATED_EVENT, seatedPlan, valueOf } from "@/backend/testing/fixtures";
-import { createBuyerHandlers, createHandlers } from "./handlers";
+import { ACTIVITY_CACHE_CONTROL, createBuyerHandlers, createHandlers } from "./handlers";
 import { signDemoTicket } from "@/core/demo-ticket-key";
 
 let idCount = 0;
@@ -86,6 +87,53 @@ async function expectProblem(response: Response, status: number, code: string) {
 }
 
 describe("HTTP contract", () => {
+  // Public, so it says what happened and when, never who or which order: a hold's id or an
+  // order's is the key to it, and attendees are people. Keys are listed, not filtered, so a
+  // field added later has to be added here on purpose.
+  it("tells anyone what the box office is doing, with no ids or names in it", async () => {
+    const { hold } = valueOf(
+      backend.createHold({ eventSlug: "open-studio-ceramics", items: [{ tierId: "osc-session", quantity: 2 }] }),
+    );
+    valueOf(
+      backend.upsertOrder({
+        holdId: hold.id,
+        attendees: [
+          { name: "Asha Rao", email: "asha@example.com" },
+          { name: "Ravi Iyer", email: "ravi@example.com" },
+        ],
+        addOns: {},
+      }),
+    );
+    const response = await fetch(`${BASE_URL}/api/activity`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe(ACTIVITY_CACHE_CONTROL);
+    const body = (await response.json()) as { recent: object[] };
+    expect(Object.keys(body).sort()).toEqual(
+      ["heldNow", "lastSaleAt", "queuing", "recent", "serverTime", "soldToday", "timeZone"].sort(),
+    );
+    expect(body.recent.length).toBeGreaterThan(0);
+    for (const entry of body.recent) {
+      expect(Object.keys(entry).sort()).toEqual(
+        ["at", "eventSlug", "isSimulated", "kind", "quantity", "tierName"].sort(),
+      );
+    }
+    expect(JSON.stringify(body)).not.toMatch(new RegExp([hold.id, "Asha", "asha@", "ord_"].join("|")));
+    activityDtoSchema.parse(body);
+  });
+
+  it("answers the home page's polling without filling the visitor's log", async () => {
+    const before = backend.getState().log.length;
+    await fetch(`${BASE_URL}/api/activity`);
+    expect(
+      backend
+        .getState()
+        .log.slice(before)
+        .some((entry) => entry.message.includes("/api/activity")),
+    ).toBe(false);
+    await fetch(`${BASE_URL}/api/events`);
+    expect(backend.getState().log.at(-1)?.message).toContain("/api/events");
+  });
+
   it("lists events with live availability, and only public tier fields", async () => {
     const response = await fetch(`${BASE_URL}/api/events`);
     expect(response.status).toBe(200);

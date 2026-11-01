@@ -25,10 +25,14 @@ import {
   toPaymentResultDto,
   toQueueEntryDto,
   toSeatAvailabilityDto,
+  toActivityDto,
 } from "./mappers";
 import { anyOrigin, createKit, pathOf, type HandlerOptions, type Kit, type Reply } from "./kit";
 import { createOrganiserHandlers } from "./organiser-handlers";
 import { createSlidingWindowStore } from "./rate-limit";
+
+/** The live feed's caching: a few seconds at the edge, and a stale copy while it refetches. */
+export const ACTIVITY_CACHE_CONTROL = "public, s-maxage=5, stale-while-revalidate=10";
 
 /** A card payment can fail as it's attempted; a UPI payment only fails later, by webhook. */
 const CARD_FAILURE_DETAILS = {
@@ -131,6 +135,21 @@ export function createBuyerHandlers(
   }
 
   return [
+    // Public and the same for everyone, so a CDN may keep it for a few seconds: however many
+    // home pages poll it, the server's database sees about one read every five seconds. Quiet,
+    // so the polling doesn't push the visitor's own requests out of the sandbox's log.
+    http.get(anyOrigin(API_ROUTES.getActivity), async ({ request }) =>
+      send(
+        request,
+        {
+          status: 200,
+          body: toActivityDto(await backend.getRecentActivity()),
+          headers: { "Cache-Control": ACTIVITY_CACHE_CONTROL },
+        },
+        { isQuiet: true },
+      ),
+    ),
+
     http.get(anyOrigin(API_ROUTES.listEvents), async ({ request }) => {
       await latency();
       return send(request, { status: 200, body: (await backend.listEvents()).map(toEventDto) });

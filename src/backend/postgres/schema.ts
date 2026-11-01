@@ -80,6 +80,9 @@ export const holds = pgTable(
     index("holds_active_by_expiry")
       .on(table.expiresAt)
       .where(sql`${table.status} = 'active'`),
+    // The home page's live feed: the newest holds, and the latest to lapse.
+    index("holds_by_created").on(table.createdAt),
+    index("holds_by_expiry").on(table.expiresAt),
     check("holds_status_known", isOneOf(table.status, HOLD_STATUSES)),
   ],
 );
@@ -132,7 +135,13 @@ export const orders = pgTable(
     createdAt: at("created_at").notNull(),
     updatedAt: at("updated_at").notNull(),
   },
-  (table) => [check("orders_status_known", isOneOf(table.status, ORDER_STATUSES))],
+  (table) => [
+    check("orders_status_known", isOneOf(table.status, ORDER_STATUSES)),
+    // The home page's live feed: today's sales, and the latest. A paid order's last change is its payment.
+    index("orders_sold_by_update")
+      .on(table.updatedAt)
+      .where(sql`${table.status} IN ('paid', 'fulfilled')`),
+  ],
 );
 
 /** Every payment attempt: by card (with its last four digits) or by UPI (with when the request runs out). */

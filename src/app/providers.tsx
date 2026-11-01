@@ -22,7 +22,7 @@ const createQueryClient = () =>
     queryCache: new QueryCache({
       onError: (error, query) => {
         reportUnlessAnswer(error, "query");
-        if (query.state.data !== undefined && isTransientError(error)) {
+        if (query.state.data !== undefined && isTransientError(error) && !query.meta?.isQuietOnError) {
           showToast("Couldn’t refresh. Showing the last update.", error.message);
         }
       },

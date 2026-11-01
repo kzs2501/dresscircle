@@ -9,6 +9,7 @@
  */
 import * as z from "@/core/zod";
 import {
+  activityDtoSchema,
   eventDtoSchema,
   holdDetailsDtoSchema,
   orderDtoSchema,
@@ -200,6 +201,7 @@ export const post = <Schema extends z.ZodType>(
 
 export const apiClient = {
   listEvents: () => request(buildApiPath(API_ROUTES.listEvents, {}), z.array(eventDtoSchema)),
+  getActivity: () => request(buildApiPath(API_ROUTES.getActivity, {}), activityDtoSchema),
   getEvent: (slug: string) => request(buildApiPath(API_ROUTES.getEvent, { slug }), eventDtoSchema),
   getSeatAvailability: (slug: string) =>
     request(buildApiPath(API_ROUTES.getSeatAvailability, { slug }), seatAvailabilityDtoSchema),

@@ -37,6 +37,7 @@ import type { BuyerPort } from "@/backend/port";
 import { createIdempotencyStore } from "./idempotency";
 import { settleRazorpayPayment } from "./razorpay";
 import { SERVER_SETTINGS, type ServerDeps } from "./records";
+import { recentActivity } from "./activity";
 import { availability, holdByTiers, holdSeats, unavailableSeatIds } from "./stock";
 import { readHold, withHold, type HoldReference } from "./unit-of-work";
 
@@ -159,6 +160,8 @@ export function createPostgresBackend(
     log: () => undefined,
 
     listEvents: (): Promise<EventView[]> => Promise.all(CATALOG.map(eventView)),
+
+    getRecentActivity: () => recentActivity(db, deps.now()),
 
     async getEvent(slug: string): Promise<Result<EventView>> {
       const event = findEvent(slug);

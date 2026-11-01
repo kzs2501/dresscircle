@@ -51,3 +51,7 @@ export type HoldStatus = (typeof HOLD_STATUSES)[number];
 /** What kind of night out an event is: how the home page groups and filters them. */
 export const EVENT_CATEGORIES = ["music", "theatre", "comedy", "talks", "workshops", "festivals"] as const;
 export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
+/** What the box office's live feed reports: tickets held, sold, or let go when a hold lapsed. */
+export const ACTIVITY_KINDS = ["held", "sold", "released"] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];

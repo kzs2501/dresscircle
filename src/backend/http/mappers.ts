@@ -21,7 +21,9 @@ import type {
   PaymentResultDto,
   QueueEntryDto,
   SeatAvailabilityDto,
+  ActivityDto,
 } from "@/contract/dto";
+import type { ActivityView } from "@/backend/domain/activity";
 import type { DoorListView } from "@/backend/domain/door";
 import type {
   RefundView,
@@ -137,6 +139,13 @@ export const toSeatAvailabilityDto = ({
 }: SeatAvailabilityView): SeatAvailabilityDto => ({
   ...availability,
   serverTime: toIso(serverTimeMs),
+});
+
+export const toActivityDto = ({ serverTimeMs, lastSaleAtMs, recent, ...activity }: ActivityView): ActivityDto => ({
+  ...activity,
+  serverTime: toIso(serverTimeMs),
+  lastSaleAt: lastSaleAtMs === null ? null : toIso(lastSaleAtMs),
+  recent: recent.map(({ atMs, ...entry }) => ({ ...entry, at: toIso(atMs) })),
 });
 
 /** Durations go out as whole seconds, rounded up: "about 3 seconds" should never become 2. */
