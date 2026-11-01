@@ -12,6 +12,7 @@ import { PERMISSIONS, ROLES } from "@/core/organisations";
 import { TAX_LINE_KINDS } from "@/core/pricing";
 import { SEAT_ID_PATTERN } from "@/core/seating";
 import {
+  EVENT_CATEGORIES,
   HOLD_STATUSES,
   ORDER_STATUSES,
   PAYMENT_FAILURE_CODES,
@@ -68,6 +69,7 @@ export const addOnDtoSchema = z.object({
 export const eventDtoSchema = z.object({
   slug: z.string(),
   name: z.string(),
+  category: z.enum(EVENT_CATEGORIES),
   tagline: z.string(),
   startsAt: isoDateTimeSchema,
   /** IANA time zone of the venue: show event times in it. */

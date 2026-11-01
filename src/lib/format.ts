@@ -56,6 +56,25 @@ const peopleFormatter = new Intl.NumberFormat(DISPLAY_LOCALE);
 /** "40,000"; and in Indian grouping, "1,20,000". */
 export const formatCount = (count: number) => peopleFormatter.format(count);
 
+const SMALL_NUMBERS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+];
+
+/** A small count in words, as prose writes it ("ten Indian cities"); digits past twelve. */
+export const spellCount = (count: number) => SMALL_NUMBERS[count] ?? formatCount(count);
+
 /**
  * A wait, said coarsely, because an estimate is an estimate: "less than a minute",
  * "about 3 minutes", "about an hour". Precise-but-wrong numbers erode trust faster

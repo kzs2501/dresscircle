@@ -7,8 +7,8 @@ export const LAKESIDE_OWNER = "acc-lakeside-owner";
 export const LAKESIDE_BOX_OFFICE = "acc-lakeside-box-office";
 
 /** A fulfilled order from Lakeside Live's history (the festival), and a refunded one. */
-export const FULFILLED_ORDER_ID = "ord_h09076";
-export const REFUNDED_ORDER_ID = "ord_h09072";
+export const FULFILLED_ORDER_ID = "ord_h11202";
+export const REFUNDED_ORDER_ID = "ord_h11198";
 
 /** A story's `beforeEach`: sign in to the story's own sandbox as `accountId`. */
 export const signedInAs = (accountId: string) => async () => {

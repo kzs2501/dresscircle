@@ -23,12 +23,17 @@ describe("order history", () => {
     }
   });
 
-  it("sells a seated hall's sold seats, each once, and no others", () => {
-    const monsoon = CATALOG.find((event) => event.slug === "monsoon-strings");
-    if (monsoon?.seating.kind !== "reserved") throw new Error("monsoon-strings should be seated");
-    const seatIds = history.orders.filter((order) => order.status === "fulfilled").flatMap((order) => order.seatIds);
-    expect(new Set(seatIds).size).toBe(seatIds.length);
-    expect(new Set(seatIds)).toEqual(monsoon.seating.baselineSoldSeatIds);
+  it("sells each seated hall's sold seats, each once, and no others", () => {
+    const seated = CATALOG.filter((event) => event.seating.kind === "reserved");
+    expect(seated.length).toBeGreaterThan(1);
+    for (const event of seated) {
+      if (event.seating.kind !== "reserved") continue;
+      const seatIds = history.orders
+        .filter((order) => order.status === "fulfilled" && order.eventSlug === event.slug)
+        .flatMap((order) => order.seatIds);
+      expect(new Set(seatIds).size, event.slug).toBe(seatIds.length);
+      expect(new Set(seatIds), event.slug).toEqual(event.seating.baselineSoldSeatIds);
+    }
   });
 
   it("numbers about nine thousand orders oldest first, all within the last 30 days", () => {

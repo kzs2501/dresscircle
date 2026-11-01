@@ -13,8 +13,11 @@ import { signDemoTicket } from "@/core/demo-ticket-key";
 
 export const START_MS = Date.UTC(2026, 9, 12, 10, 0, 0);
 
-/** A backend on a fake clock with deterministic ids. */
-export function createTestBackend(presetId: PresetId = "happy") {
+/** A backend on a fake clock with deterministic ids (and, unless a test brings its own, randomness). */
+export function createTestBackend(
+  presetId: PresetId = "happy",
+  { random = () => 0.42 }: { random?: () => number } = {},
+) {
   let nowMs = START_MS;
   let idCount = 0;
   const clock = {
@@ -28,7 +31,7 @@ export function createTestBackend(presetId: PresetId = "happy") {
       now: clock.now,
       newId: (prefix) => `${prefix}_${++idCount}`,
       newToken: () => `token_${++idCount}`,
-      random: () => 0.42,
+      random,
       signTicket: signDemoTicket,
     },
     createInitialState(presetId, START_MS),

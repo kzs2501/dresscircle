@@ -188,7 +188,9 @@ describe("reserved seating", () => {
   });
 
   it("lets the background crowd buy seats", () => {
-    const { backend } = createTestBackend("crowd");
+    // Randomness that walks every tier in turn, so a seated one comes up whatever the catalogue holds.
+    let draw = 0;
+    const { backend } = createTestBackend("crowd", { random: () => (draw++ % 40) / 40 });
     let ticks = 0;
     while (backend.getState().soldSeatIds.length === 0 && ticks < 50) {
       backend.runCrowdTick();

@@ -66,7 +66,9 @@ describe("listing orders", () => {
     expect(byName.every((row) => row.buyerName === first?.buyerName)).toBe(true);
 
     const theirs = valueOf(backend.exportOrders(rangmanchOwner, params()));
-    expect(new Set(theirs.map((row) => row.eventSlug))).toEqual(new Set(["open-studio-ceramics", "monsoon-strings"]));
+    expect(new Set(theirs.map((row) => row.eventSlug))).toEqual(
+      new Set(["open-studio-ceramics", "monsoon-strings", "last-train-from-churchgate", "ragas-by-the-river"]),
+    );
     expect(backend.listOrders(rangmanchOwner, params({ event: "lakeside-lights" }))).toMatchObject({
       error: { code: "forbidden" },
     });

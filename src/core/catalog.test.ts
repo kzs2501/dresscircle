@@ -23,6 +23,29 @@ describe("catalogue", () => {
     }
   });
 
+  // The sandbox remembers sold seats by seat id alone, so two halls sharing an id would
+  // share a seat: selling it at one event would sell it at the other.
+  it("gives every seat in every hall an id no other hall uses", () => {
+    const seatIds = CATALOG.flatMap((event) =>
+      event.seating.kind === "reserved" ? event.seating.plan.seats.map((seat) => seat.id) : [],
+    );
+    expect(CATALOG.filter((event) => event.seating.kind === "reserved").length).toBeGreaterThan(1);
+    expect(new Set(seatIds).size).toBe(seatIds.length);
+  });
+
+  it("seats every reserved tier in its own hall", () => {
+    for (const event of CATALOG) {
+      if (event.seating.kind !== "reserved") continue;
+      const tierIds = new Set(event.tiers.map((tier) => tier.id));
+      for (const seat of event.seating.plan.seats) expect(tierIds, event.slug).toContain(seat.tierId);
+    }
+  });
+
+  // "Sold today" and the box office's day are counted in one zone.
+  it("holds every event in one time zone", () => {
+    expect(new Set(CATALOG.map((event) => event.timeZone))).toEqual(new Set(["Asia/Kolkata"]));
+  });
+
   it("finds events by slug, and throws only from getEvent", () => {
     expect(findEvent("night-market-jazz")?.name).toBe("Night Market Jazz");
     expect(findEvent("nope")).toBeUndefined();

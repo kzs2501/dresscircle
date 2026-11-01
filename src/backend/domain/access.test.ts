@@ -49,10 +49,15 @@ describe("event access", () => {
       "frontend-systems-summit",
       "night-market-jazz",
       "lakeside-lights",
+      "late-show-hauz-khas",
+      "payments-after-collect",
+      "deccan-nights",
     ]);
     expect(eventsFor(account("acc-rangmanch-owner")).map((event) => event.slug)).toEqual([
       "open-studio-ceramics",
       "monsoon-strings",
+      "last-train-from-churchgate",
+      "ragas-by-the-river",
     ]);
   });
 

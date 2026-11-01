@@ -318,6 +318,7 @@ export const eventViewOf = (
 ): EventView => ({
   slug: event.slug,
   name: event.name,
+  category: event.category,
   tagline: event.tagline,
   startsAt: event.startsAt,
   timeZone: event.timeZone,

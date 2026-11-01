@@ -15,7 +15,7 @@ interface LabelledString {
 }
 
 /** Keys that hold identifiers or machine values, not copy. */
-const NON_COPY_KEYS = new Set(["slug", "id", "startsAt", "timeZone", "currency"]);
+const NON_COPY_KEYS = new Set(["slug", "id", "startsAt", "timeZone", "currency", "category"]);
 
 /** Every string a visitor can read from a content module, with where it came from. */
 function collectStrings(value: unknown, path: string): LabelledString[] {

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { CATALOG } from "@/core/catalog";
 import { lowestAllInPriceMinor } from "@/core/pricing";
-import { formatEventDate, formatEventTime, formatMoney } from "@/lib/format";
+import { formatEventDate, formatEventTime, formatMoney, spellCount } from "@/lib/format";
 import { AvailabilityBadge } from "@/features/events/components/availability-badge";
 import { routes } from "@/lib/routes";
+
+const CITY_COUNT = new Set(CATALOG.map((event) => event.city)).size;
 
 export default function Home() {
   return (
@@ -13,9 +15,9 @@ export default function Home() {
         Find a seat for tonight.
       </h1>
       <p className="mt-4 max-w-2xl text-lg text-pretty text-ink-2">
-        Concerts, talks and workshops across five Indian cities. Everything here works the way a real box office does,
-        and nothing is charged. Open the <strong className="font-medium text-ink">Chaos panel</strong> to decline a
-        card, send a webhook twice, or let a crowd chase the last seat.
+        Concerts, plays and talks across {spellCount(CITY_COUNT)} Indian cities. Everything here works the way a real
+        box office does, and nothing is charged. Open the <strong className="font-medium text-ink">Chaos panel</strong>{" "}
+        to decline a card, send a webhook twice, or let a crowd chase the last seat.
       </p>
 
       <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

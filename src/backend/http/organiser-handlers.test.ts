@@ -66,7 +66,12 @@ describe("organisers' API", () => {
     const events = organiserEventDtoSchema
       .array()
       .parse(await (await call("/api/organiser/events", { headers: bearer(token) })).json());
-    expect(events.map((event) => event.slug)).toEqual(["open-studio-ceramics", "monsoon-strings"]);
+    expect(events.map((event) => event.slug)).toEqual([
+      "open-studio-ceramics",
+      "monsoon-strings",
+      "last-train-from-churchgate",
+      "ragas-by-the-river",
+    ]);
 
     const theirs = await call("/api/organiser/events/lakeside-lights", { headers: bearer(token) });
     const problem = await expectProblem(theirs, 403, "forbidden");

@@ -47,3 +47,7 @@ export const HOLD_STATUSES = ["active", "expired", "converted"] as const;
 export const QUEUE_STATUSES = ["waiting", "admitted", "expired"] as const;
 export type QueueStatus = (typeof QUEUE_STATUSES)[number];
 export type HoldStatus = (typeof HOLD_STATUSES)[number];
+
+/** What kind of night out an event is: how the home page groups and filters them. */
+export const EVENT_CATEGORIES = ["music", "theatre", "comedy", "talks", "workshops", "festivals"] as const;
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];

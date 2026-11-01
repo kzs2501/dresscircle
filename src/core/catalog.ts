@@ -8,7 +8,17 @@
 import type { CurrencyCode } from "./money";
 import type { OrganisationId } from "./organisations";
 import type { SeatPlan } from "./seating";
-import { baselineSoldSeatIds, RANGMANCH_PLAN } from "./venues";
+import type { EventCategory } from "./statuses";
+import { baselineSoldSeatIds, MARINE_LINES_PLAN, RANGMANCH_PLAN } from "./venues";
+
+export const CATEGORY_LABELS: Record<EventCategory, string> = {
+  music: "Music",
+  theatre: "Theatre",
+  comedy: "Comedy",
+  talks: "Talks",
+  workshops: "Workshops",
+  festivals: "Festivals",
+};
 
 export interface TierInfo {
   id: string;
@@ -48,6 +58,7 @@ export interface EventInfo {
   /** The organisation that runs it, and whose accounts may see its orders. */
   organiserId: OrganisationId;
   name: string;
+  category: EventCategory;
   tagline: string;
   /** ISO 8601, with the venue's offset. */
   startsAt: string;
@@ -64,6 +75,7 @@ export interface EventInfo {
 }
 
 const MONSOON_SOLD_SEAT_IDS = baselineSoldSeatIds(RANGMANCH_PLAN, 2026);
+const LAST_TRAIN_SOLD_SEAT_IDS = baselineSoldSeatIds(MARINE_LINES_PLAN, 1933);
 
 /** A reserved tier's capacity and baseline come from its seats, so the two can't disagree. */
 function seatedTier(
@@ -80,8 +92,9 @@ export const CATALOG: EventInfo[] = [
     slug: "frontend-systems-summit",
     organiserId: "lakeside-live",
     name: "Frontend Systems Summit",
+    category: "talks",
     tagline: "One day of talks on design systems, performance and the web platform.",
-    startsAt: "2026-11-21T09:30:00+05:30",
+    startsAt: "2027-03-20T09:30:00+05:30",
     timeZone: "Asia/Kolkata",
     currency: "INR",
     venue: "The Foundry, Hall 2",
@@ -128,8 +141,9 @@ export const CATALOG: EventInfo[] = [
     slug: "night-market-jazz",
     organiserId: "lakeside-live",
     name: "Night Market Jazz",
+    category: "music",
     tagline: "A standing-room trio set in a covered courtyard.",
-    startsAt: "2026-11-07T20:00:00+05:30",
+    startsAt: "2027-02-06T20:00:00+05:30",
     timeZone: "Asia/Kolkata",
     currency: "INR",
     venue: "Courtyard at Old Mill Lane",
@@ -161,8 +175,9 @@ export const CATALOG: EventInfo[] = [
     slug: "open-studio-ceramics",
     organiserId: "rangmanch-arts",
     name: "Open Studio: Ceramics",
+    category: "workshops",
     tagline: "Two hours at the wheel, materials and firing included.",
-    startsAt: "2026-12-05T11:00:00+05:30",
+    startsAt: "2027-04-10T11:00:00+05:30",
     timeZone: "Asia/Kolkata",
     currency: "INR",
     venue: "Clayhouse Studio",
@@ -186,8 +201,9 @@ export const CATALOG: EventInfo[] = [
     slug: "monsoon-strings",
     organiserId: "rangmanch-arts",
     name: "Monsoon Strings",
+    category: "music",
     tagline: "A chamber orchestra plays The Four Seasons, and four new ones written for the monsoon.",
-    startsAt: "2026-12-12T19:00:00+05:30",
+    startsAt: "2027-07-17T19:00:00+05:30",
     timeZone: "Asia/Kolkata",
     currency: "INR",
     venue: "Rangmanch Auditorium",
@@ -229,8 +245,9 @@ export const CATALOG: EventInfo[] = [
     slug: "lakeside-lights",
     organiserId: "lakeside-live",
     name: "Lakeside Lights Festival",
+    category: "festivals",
     tagline: "Two days of music by the water, and a lantern parade at dusk.",
-    startsAt: "2027-01-16T14:00:00+05:30",
+    startsAt: "2027-11-13T14:00:00+05:30",
     timeZone: "Asia/Kolkata",
     currency: "INR",
     venue: "Lakefront Grounds",
@@ -273,6 +290,185 @@ export const CATALOG: EventInfo[] = [
         gstRateBasisPoints: 1800,
       },
     ],
+  },
+  {
+    slug: "last-train-from-churchgate",
+    organiserId: "rangmanch-arts",
+    name: "The Last Train from Churchgate",
+    category: "theatre",
+    tagline: "A new play about the people on Mumbai’s last local of the night.",
+    startsAt: "2027-03-05T19:30:00+05:30",
+    timeZone: "Asia/Kolkata",
+    currency: "INR",
+    venue: "Marine Lines Playhouse",
+    city: "Mumbai",
+    seating: { kind: "reserved", plan: MARINE_LINES_PLAN, baselineSoldSeatIds: LAST_TRAIN_SOLD_SEAT_IDS },
+    description:
+      "Ninety minutes, no interval, in English and Marathi with surtitles. Every seat is reserved: choose yours on the map, or let us find the best ones left.",
+    tiers: [
+      seatedTier(MARINE_LINES_PLAN, LAST_TRAIN_SOLD_SEAT_IDS, {
+        id: "lt-circle",
+        name: "Dress Circle",
+        description: "The first balcony, rows A–H: the best view in the house.",
+        priceMinor: 180000,
+      }),
+      seatedTier(MARINE_LINES_PLAN, LAST_TRAIN_SOLD_SEAT_IDS, {
+        id: "lt-stalls",
+        name: "Stalls",
+        description: "The ground floor, rows A–P.",
+        priceMinor: 120000,
+      }),
+      seatedTier(MARINE_LINES_PLAN, LAST_TRAIN_SOLD_SEAT_IDS, {
+        id: "lt-balcony",
+        name: "Balcony",
+        description: "The upper balcony, rows A–H.",
+        priceMinor: 60000,
+      }),
+    ],
+    addOns: [],
+  },
+  {
+    slug: "late-show-hauz-khas",
+    organiserId: "lakeside-live",
+    name: "The Late Show, Hauz Khas",
+    category: "comedy",
+    tagline: "Four comics, one microphone, and a room above a bookshop.",
+    startsAt: "2027-02-19T21:00:00+05:30",
+    timeZone: "Asia/Kolkata",
+    currency: "INR",
+    venue: "The Lantern Room",
+    city: "Delhi",
+    seating: { kind: "general" },
+    description: "An hour and a half of new stand-up, in English and Hindi. Ages 18 and up; the bar is open.",
+    tiers: [
+      {
+        id: "ls-standard",
+        name: "Standard",
+        description: "Any free seat, first come.",
+        priceMinor: 49900,
+        capacity: 80,
+        baselineSold: 52,
+      },
+      {
+        id: "ls-front",
+        name: "Front two rows",
+        description: "Close enough to be part of the show.",
+        priceMinor: 89900,
+        capacity: 16,
+        baselineSold: 13,
+      },
+    ],
+    addOns: [],
+  },
+  {
+    slug: "ragas-by-the-river",
+    organiserId: "rangmanch-arts",
+    name: "Ragas by the River",
+    category: "music",
+    tagline: "Sarod and tabla on the lawns by the Hooghly, as the light goes.",
+    startsAt: "2027-03-28T17:30:00+05:30",
+    timeZone: "Asia/Kolkata",
+    currency: "INR",
+    venue: "Riverside Lawns",
+    city: "Kolkata",
+    seating: { kind: "general" },
+    description:
+      "An open-air evening of Hindustani classical music. Bring a shawl. The lawn is seated on durries; the front chairs are numbered on the night.",
+    tiers: [
+      {
+        id: "rr-lawn",
+        name: "Lawn",
+        description: "On the durries, anywhere on the lawn.",
+        priceMinor: 70000,
+        capacity: 400,
+        baselineSold: 190,
+      },
+      {
+        id: "rr-chairs",
+        name: "Front chairs",
+        description: "A numbered chair in the first rows.",
+        priceMinor: 150000,
+        capacity: 60,
+        baselineSold: 41,
+      },
+    ],
+    addOns: [],
+  },
+  {
+    slug: "payments-after-collect",
+    organiserId: "lakeside-live",
+    name: "Payments After Collect",
+    category: "talks",
+    tagline: "Three talks on how India pays now that UPI collect requests are gone.",
+    startsAt: "2027-04-22T18:30:00+05:30",
+    timeZone: "Asia/Kolkata",
+    currency: "INR",
+    venue: "Marina Hall",
+    city: "Chennai",
+    seating: { kind: "general" },
+    description:
+      "Engineers from three payment teams on intent links, QR codes and webhooks that arrive twice. Doors at six; talks from half past, with questions after each.",
+    tiers: [
+      {
+        id: "pac-general",
+        name: "General",
+        description: "A seat for the evening.",
+        priceMinor: 49900,
+        capacity: 150,
+        baselineSold: 88,
+      },
+      {
+        id: "pac-supporter",
+        name: "Supporter",
+        description: "Pays for a student’s seat as well as yours.",
+        priceMinor: 150000,
+        capacity: 30,
+        baselineSold: 9,
+      },
+    ],
+    addOns: [],
+  },
+  {
+    slug: "deccan-nights",
+    organiserId: "lakeside-live",
+    name: "Deccan Nights",
+    category: "festivals",
+    tagline: "Two evenings of food stalls and live music under the lights.",
+    startsAt: "2027-10-09T16:00:00+05:30",
+    timeZone: "Asia/Kolkata",
+    currency: "INR",
+    venue: "Banjara Grounds",
+    city: "Hyderabad",
+    seating: { kind: "general" },
+    description:
+      "Biryani, haleem and Irani chai from twenty kitchens, and three bands a night. Children under 12 come free with an adult.",
+    tiers: [
+      {
+        id: "dn-evening",
+        name: "One evening",
+        description: "Saturday or Sunday, from four.",
+        priceMinor: 99900,
+        capacity: 3_000,
+        baselineSold: 1_700,
+      },
+      {
+        id: "dn-both",
+        name: "Both evenings",
+        description: "Saturday and Sunday.",
+        priceMinor: 169900,
+        capacity: 1_500,
+        baselineSold: 820,
+      },
+      {
+        id: "dn-vip",
+        name: "VIP",
+        description: "A seat in the covered lounge, and a plate from each kitchen.",
+        priceMinor: 499900,
+        capacity: 200,
+        baselineSold: 120,
+      },
+    ],
+    addOns: [],
   },
 ];
 

@@ -20,7 +20,7 @@ import {
 } from "@/core/statuses";
 
 /** Bump when the shape changes; older saves then start a fresh sandbox (see ADR 001). */
-const STATE_VERSION = 15;
+const STATE_VERSION = 16;
 
 /** Versioned, so a save from an older shape is never even read. */
 export const SANDBOX_STORAGE_KEY = STORAGE_KEYS.sandbox(STATE_VERSION);

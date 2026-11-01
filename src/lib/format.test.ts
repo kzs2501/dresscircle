@@ -5,6 +5,7 @@ import {
   describeItems,
   describePayment,
   formatCount,
+  spellCount,
   formatEventDate,
   formatEventTime,
   formatMoney,
@@ -52,6 +53,14 @@ describe("formatting", () => {
   it("counts people with Indian digit grouping", () => {
     expect(formatCount(40_000)).toBe("40,000");
     expect(formatCount(120_000)).toBe("1,20,000");
+  });
+
+  it("spells small counts in words, as prose does, and larger ones in digits", () => {
+    expect(spellCount(1)).toBe("one");
+    expect(spellCount(10)).toBe("ten");
+    expect(spellCount(12)).toBe("twelve");
+    expect(spellCount(13)).toBe("13");
+    expect(spellCount(1_500)).toBe("1,500");
   });
 
   it("says a wait coarsely, the way an estimate should be said", () => {
