@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { axeViolations, expect, test } from "./fixtures";
+import { axeViolations, expect, test, openEvent } from "./fixtures";
 
 test("extras appear only for events that have them", { tag: "@both" }, async ({ page, buyer }) => {
   await page.goto("/");
@@ -110,7 +110,7 @@ test.describe("accessibility", () => {
       ).toBeVisible();
       expect(await axeViolations(page), "home").toEqual([]);
 
-      await page.getByRole("link", { name: /Frontend Systems Summit/ }).click();
+      await openEvent(page, /Frontend Systems Summit/);
       await expect(page.getByRole("button", { name: "Reserve tickets" })).toBeVisible();
       expect(await axeViolations(page), "event").toEqual([]);
 

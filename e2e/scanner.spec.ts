@@ -8,7 +8,7 @@
 import type { Page } from "@playwright/test";
 import { signDemoTicket } from "../src/core/demo-ticket-key";
 import { forgedTicket, photoOfCode, STUDIO, ticketClaims, withoutNativeDetector } from "./door";
-import { axeViolations, expect, test } from "./fixtures";
+import { axeViolations, expect, test, openEvent } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await withoutNativeDetector(page);
@@ -165,7 +165,7 @@ test("the buyer's pages never load the scanner's reader", async ({ page }) => {
     if (request.url().includes("zxing")) readerRequests.push(request.url());
   });
   await page.goto("/");
-  await page.getByRole("link", { name: /Open Studio/ }).click();
+  await openEvent(page, /Open Studio/);
   await expect(page.getByRole("button", { name: "Reserve tickets" })).toBeVisible();
   await page.goto("/tickets");
   await expect(page.getByRole("heading", { level: 1, name: "Your tickets" })).toBeVisible();

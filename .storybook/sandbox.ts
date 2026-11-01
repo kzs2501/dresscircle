@@ -18,6 +18,8 @@ import { signDemoTicket } from "@/core/demo-ticket-key";
 /** What a story may ask of its backend, as `parameters.sandbox`. */
 export interface SandboxParameters {
   preset?: PresetId;
+  /** Start with a few of the simulated buyers' sales behind it, as the app's sandbox does. */
+  isBusy?: boolean;
 }
 
 const SEED = 20_261_018;
@@ -61,10 +63,11 @@ function forgetAppStorage() {
 }
 
 /** Give the story a fresh backend; returns the clean-up for when it's left. */
-export async function startStorySandbox({ preset = "happy" }: SandboxParameters = {}) {
+export async function startStorySandbox({ preset = "happy", isBusy = false }: SandboxParameters = {}) {
   await started;
   forgetAppStorage();
   const backend = createStoryBackend(preset);
+  if (isBusy) backend.backfillAmbientCrowd();
   worker.resetHandlers(...handlersFor(backend));
   return () => {
     forgetAppStorage();

@@ -14,15 +14,6 @@ import { baselineSoldSeatIds, MARINE_LINES_PLAN, RANGMANCH_PLAN } from "./venues
 /** Every venue's zone: the box office's "today" is counted in it (a catalogue test holds every event to it). */
 export const CATALOG_TIME_ZONE = "Asia/Kolkata";
 
-export const CATEGORY_LABELS: Record<EventCategory, string> = {
-  music: "Music",
-  theatre: "Theatre",
-  comedy: "Comedy",
-  talks: "Talks",
-  workshops: "Workshops",
-  festivals: "Festivals",
-};
-
 export interface TierInfo {
   id: string;
   name: string;

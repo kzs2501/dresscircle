@@ -46,8 +46,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </a>
         <Providers>
           <header className="border-b-4 border-double border-action">
-            <div className="mx-auto flex h-16 max-w-5xl items-center gap-2 px-5 sm:gap-4 sm:px-8">
-              <Link href="/" className="text-lg text-accent">
+            <div className="mx-auto flex min-h-16 max-w-5xl flex-wrap items-center gap-2 px-5 py-3 min-[360px]:flex-nowrap min-[360px]:py-0 sm:gap-4 sm:px-8">
+              <Link href="/" className="text-sm whitespace-nowrap text-accent min-[400px]:text-base sm:text-lg">
                 <Wordmark />
               </Link>
               <span className="hidden rounded-full border border-line px-2.5 py-0.5 text-xs text-ink-3 sm:inline">

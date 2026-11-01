@@ -117,7 +117,10 @@ test("the sandbox's mock backend sees the API, and nothing else", async ({ page,
     ]),
   );
   const seen = await worker.evaluate(() => Reflect.get(globalThis, "__mswSaw") as string[]);
-  expect(seen).toEqual(["/api/events"]);
+  // The API call, and nothing else. The page's own polling (availability, the live feed)
+  // may land in the same moment: API requests too, which is what this is about.
+  expect(seen).toContain("/api/events");
+  expect(seen.filter((path) => !path.startsWith("/api/"))).toEqual([]);
 });
 
 test("the sandbox's API comes back after the browser stops its service worker", async ({ page, buyer }) => {

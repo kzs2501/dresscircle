@@ -3,7 +3,7 @@
  * reserving. Each checks what the buyer sees and what the server recorded.
  */
 import type { Page } from "@playwright/test";
-import { axeViolations, expect, test } from "./fixtures";
+import { axeViolations, expect, test, openEvent } from "./fixtures";
 
 const QUEUE_PAGE = /\/events\/open-studio-ceramics\/queue$/;
 
@@ -15,7 +15,7 @@ async function peopleAhead(page: Page) {
 }
 
 async function joinTheQueue(page: Page) {
-  await page.getByRole("link", { name: /Open Studio/ }).click();
+  await openEvent(page, /Open Studio/);
   await expect(page.getByRole("heading", { name: "This sale has a queue" })).toBeVisible();
   await page.getByRole("button", { name: "Join the queue" }).click();
   await expect(page).toHaveURL(QUEUE_PAGE);
@@ -69,7 +69,7 @@ test("too many attempts: the fourth reserve waits out the server's Retry-After, 
   test.setTimeout(60_000);
   await page.goto("/");
   await sandbox.choosePreset("Too many attempts"); // 3 tries per 15 s
-  await page.getByRole("link", { name: /Open Studio/ }).click();
+  await openEvent(page, /Open Studio/);
   const reserveButton = page.getByRole("button", { name: "Reserve tickets" });
 
   for (let attempt = 0; attempt < 3; attempt++) {

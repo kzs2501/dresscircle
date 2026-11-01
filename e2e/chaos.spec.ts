@@ -2,7 +2,7 @@
  * One test per chaos preset. Each asserts what the buyer sees AND what the server
  * recorded — the UI being right for the wrong reason doesn't count.
  */
-import { expect, test } from "./fixtures";
+import { expect, test, openEvent } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -126,7 +126,7 @@ test("3-D Secure survives a refresh mid-challenge", async ({ page, buyer, sandbo
 test("slow network: a double click reserves once and pays once", async ({ page, buyer, sandbox }) => {
   test.setTimeout(60_000);
   await sandbox.choosePreset("Slow network");
-  await page.getByRole("link", { name: /Open Studio/ }).click();
+  await openEvent(page, /Open Studio/);
   await page.getByRole("button", { name: "More: Two-hour session" }).click();
   await page.getByRole("button", { name: "Reserve tickets" }).dblclick();
   await expect(page.getByRole("button", { name: "Reserving…" })).toBeDisabled();

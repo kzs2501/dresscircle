@@ -28,6 +28,17 @@ export async function axeViolations(page: Page) {
   );
 }
 
+/**
+ * The home page's list of every event. An event can appear twice on the page (in "Almost
+ * gone" too), so the tests open events from here, where each has one link.
+ */
+export const allEvents = (page: Page) => page.getByRole("region", { name: "All events" });
+
+/** Open an event from the home page's list of every event. */
+export async function openEvent(page: Page, eventName: RegExp) {
+  await allEvents(page).getByRole("link", { name: eventName }).click();
+}
+
 export class Buyer {
   constructor(readonly page: Page) {}
 
@@ -37,7 +48,7 @@ export class Buyer {
   }
 
   async reserve(eventName: RegExp, tierName: string, quantity: number) {
-    await this.page.getByRole("link", { name: eventName }).click();
+    await openEvent(this.page, eventName);
     for (let i = 0; i < quantity; i++) await this.page.getByRole("button", { name: `More: ${tierName}` }).click();
     await this.page.getByRole("button", { name: "Reserve tickets" }).click();
   }

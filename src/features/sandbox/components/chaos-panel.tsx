@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PRESETS, type LogKind, type PresetId } from "@/backend";
+import { onChaosPanelRequest } from "@/features/sandbox/chaos-panel-requests";
 import { useSandboxControl } from "@/features/sandbox/hooks/use-sandbox-control";
 
 const formatLogTime = (epochMs: number) =>
@@ -34,6 +35,10 @@ export function ChaosPanel() {
     dialog.current?.showModal();
   };
 
+  // The home page's "Break a payment" opens the panel too.
+  const openOnRequest = useEffectEvent(open);
+  useEffect(() => onChaosPanelRequest(openOnRequest), []);
+
   const choose = (id: PresetId) => sandbox?.setPreset(id);
 
   const reset = () => {
@@ -52,11 +57,13 @@ export function ChaosPanel() {
       <button
         type="button"
         onClick={open}
-        className="inline-flex min-h-10 press items-center gap-2 rounded-full border border-line bg-card px-4 text-sm hover:bg-sunk"
+        className="inline-flex min-h-10 press items-center gap-2 rounded-full border border-line bg-card px-3 text-sm hover:bg-sunk sm:px-4"
       >
         <span aria-hidden="true" className={`size-2 rounded-full ${presetId === "happy" ? "bg-ok" : "bg-accent"}`} />
         <span>
-          Chaos<span className="sr-only">:</span> <span className="text-ink-2">{activePreset?.label}</span>
+          {/* On a phone the dot says whether anything's switched on; the name is still read out. */}
+          Chaos<span className="sr-only">:</span>{" "}
+          <span className="text-ink-2 max-sm:sr-only">{activePreset?.label}</span>
         </span>
       </button>
 

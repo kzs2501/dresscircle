@@ -125,3 +125,21 @@ export const formatPercent = (part: number, whole: number) => percentFormatter.f
 /** 1234 → "1.2 s", 640 → "640 ms": a duration someone waited. */
 export const formatDuration = (ms: number) =>
   ms < 1_000 ? `${String(Math.round(ms))} ms` : `${(ms / 1_000).toFixed(1)} s`;
+
+/** How long ago, said the way a live feed says it: "just now", "40 s ago", "3 min ago", "2 h ago". */
+export function formatAgo(ms: number): string {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${String(seconds)} s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${String(minutes)} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${String(hours)} h ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "yesterday" : `${String(days)} days ago`;
+}
+
+const monthFormatter = new Intl.DateTimeFormat(DISPLAY_LOCALE, { month: "long", year: "numeric", timeZone: "UTC" });
+
+/** `2027-03` → "March 2027". */
+export const formatMonth = (isoMonth: string) => monthFormatter.format(new Date(`${isoMonth}-01T00:00:00Z`));

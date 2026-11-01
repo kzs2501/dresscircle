@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ROLE_LABELS } from "@/core/organisations";
 import { routes } from "@/lib/routes";
 import { Button } from "@/components/ui/button";
+import { PauseToggle } from "@/components/ui/pause-toggle";
 import { Spinner } from "@/components/ui/spinner";
 import { LiveUpdatesProvider, useLiveUpdates, type LiveStatus } from "@/features/organiser/hooks/use-live-updates";
 import { useOrganiserSession } from "@/features/organiser/hooks/use-organiser-session";
@@ -20,26 +21,14 @@ const STATUS_LABELS: Record<LiveStatus, string> = {
 function LiveToggle() {
   const { status, isPaused, setIsPaused } = useLiveUpdates();
   return (
-    <div className="flex items-center gap-3">
-      <p role="status" className="flex items-center gap-2 text-sm text-ink-2">
-        <span
-          aria-hidden="true"
-          className={`size-2 rounded-full ${status === "live" ? "bg-ok" : status === "paused" ? "bg-ink-3" : "bg-warn"}`}
-        />
-        {STATUS_LABELS[status]}
-      </p>
-      <Button
-        type="button"
-        variant="secondary"
-        aria-pressed={isPaused}
-        onClick={() => {
-          setIsPaused(!isPaused);
-        }}
-        className="min-h-9 px-3"
-      >
-        Pause live updates
-      </Button>
-    </div>
+    <PauseToggle
+      tone={status === "live" ? "live" : status === "paused" ? "paused" : "waiting"}
+      label={STATUS_LABELS[status]}
+      isPaused={isPaused}
+      onToggle={() => {
+        setIsPaused(!isPaused);
+      }}
+    />
   );
 }
 

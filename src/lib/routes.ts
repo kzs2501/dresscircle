@@ -6,7 +6,7 @@ import type { Route } from "next";
 import { problemPathFor, type ProblemCode } from "@/contract/problems";
 
 export const routes = {
-  home: (): Route => "/",
+  home: (query?: URLSearchParams) => (query?.size ? `/?${query.toString()}` : "/") as Route,
   event: (slug: string) => `/events/${encodeURIComponent(slug)}` as Route,
   queue: (slug: string) => `/events/${encodeURIComponent(slug)}/queue` as Route,
   checkoutStep: (holdId: string, step: string) =>

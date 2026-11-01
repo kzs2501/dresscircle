@@ -4,7 +4,9 @@ import { getEvent } from "@/core/catalog";
 import {
   describeItems,
   describePayment,
+  formatAgo,
   formatCount,
+  formatMonth,
   spellCount,
   formatEventDate,
   formatEventTime,
@@ -53,6 +55,19 @@ describe("formatting", () => {
   it("counts people with Indian digit grouping", () => {
     expect(formatCount(40_000)).toBe("40,000");
     expect(formatCount(120_000)).toBe("1,20,000");
+  });
+
+  it("says how long ago the way a live feed does", () => {
+    expect(formatAgo(4_000)).toBe("just now");
+    expect(formatAgo(40_000)).toBe("40 s ago");
+    expect(formatAgo(3 * 60_000 + 20_000)).toBe("3 min ago");
+    expect(formatAgo(2 * 3_600_000)).toBe("2 h ago");
+    expect(formatAgo(30 * 3_600_000)).toBe("yesterday");
+    expect(formatAgo(-5_000)).toBe("just now"); // a clock a little ahead of the server's
+  });
+
+  it("names a month", () => {
+    expect(formatMonth("2027-03")).toBe("March 2027");
   });
 
   it("spells small counts in words, as prose does, and larger ones in digits", () => {

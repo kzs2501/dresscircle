@@ -52,6 +52,16 @@ export type HoldStatus = (typeof HOLD_STATUSES)[number];
 export const EVENT_CATEGORIES = ["music", "theatre", "comedy", "talks", "workshops", "festivals"] as const;
 export type EventCategory = (typeof EVENT_CATEGORIES)[number];
 
+/** How each is named on the page. Here, not in the catalogue, so a page can name one without loading every event. */
+export const CATEGORY_LABELS: Record<EventCategory, string> = {
+  music: "Music",
+  theatre: "Theatre",
+  comedy: "Comedy",
+  talks: "Talks",
+  workshops: "Workshops",
+  festivals: "Festivals",
+};
+
 /** What the box office's live feed reports: tickets held, sold, or let go when a hold lapsed. */
 export const ACTIVITY_KINDS = ["held", "sold", "released"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
