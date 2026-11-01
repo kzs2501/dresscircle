@@ -40,7 +40,8 @@ function Kpis({ metrics }: { metrics: SalesMetricsDto }) {
       {items.map((item) => (
         <div key={item.label} className="rounded-xl border border-line bg-card p-5">
           <dt className="text-sm text-ink-2">{item.label}</dt>
-          <dd className="mt-1 font-display text-2xl font-semibold tabular-nums">{item.value}</dd>
+          {/* Values carry units ("1.2 s", "640 ms"), which capitals would turn into other units. */}
+          <dd className="mt-1 font-display text-2xl font-semibold normal-case tabular-nums">{item.value}</dd>
           <dd className="mt-0.5 text-sm text-ink-3">{item.detail}</dd>
         </div>
       ))}
