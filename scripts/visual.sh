@@ -22,4 +22,4 @@ for _ in $(seq 1 120); do
 done
 docker logs "$name" 2>&1 | grep -q "Listening on" || { docker logs "$name"; exit 1; }
 
-PW_VISUAL_WS="ws://127.0.0.1:3000/" npx playwright test --config=playwright.visual.config.ts "$@"
+PW_VISUAL_WS="ws://127.0.0.1:3000/" npx playwright test --config=e2e/config/visual.config.ts "$@"

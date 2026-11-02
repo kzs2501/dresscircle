@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "@playwright/test";
 
 /**
@@ -6,6 +7,8 @@ import { defineConfig } from "@playwright/test";
  * made and checked in Playwright's Linux image on arm64, both on a laptop (through
  * `npm run test:visual`, which runs the browser in Docker) and in CI.
  */
+/** Paths here start from the repository's root, not this folder. */
+const ROOT = path.resolve(__dirname, "../..");
 const isCI = Boolean(process.env["CI"]);
 const remoteBrowser = process.env["PW_VISUAL_WS"];
 
@@ -16,7 +19,7 @@ if (process.platform !== "linux" && !remoteBrowser) {
 }
 
 export default defineConfig({
-  testDir: "visual",
+  testDir: path.join(ROOT, "visual"),
   snapshotPathTemplate: "{testDir}/__screenshots__/{projectName}/{arg}{ext}",
   fullyParallel: true,
   ...(isCI ? {} : { workers: 4 }),
@@ -24,8 +27,8 @@ export default defineConfig({
   globalTimeout: 15 * 60_000,
   // A missing baseline fails CI; locally, the first run writes it, for review in the diff.
   updateSnapshots: isCI ? "none" : "missing",
-  reporter: [["list"], ["html", { outputFolder: "playwright-report/visual", open: "never" }]],
-  outputDir: "test-results/visual",
+  reporter: [["list"], ["html", { outputFolder: path.join(ROOT, "playwright-report/visual"), open: "never" }]],
+  outputDir: path.join(ROOT, "test-results/visual"),
   expect: { toHaveScreenshot: { animations: "disabled", caret: "hide", scale: "css" } },
   use: {
     baseURL: "http://localhost:6007",
@@ -36,6 +39,7 @@ export default defineConfig({
   webServer: {
     command: "npx vite preview --outDir storybook-static --port 6007 --strictPort",
     port: 6007,
+    cwd: ROOT,
     reuseExistingServer: false,
   },
   projects: [

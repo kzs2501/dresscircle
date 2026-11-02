@@ -1,5 +1,5 @@
 /**
- * Razorpay, stood in for, for the end-to-end tests (`playwright.razorpay.config.ts`):
+ * Razorpay, stood in for, for the end-to-end tests (`e2e/config/razorpay.config.ts`):
  * its API, which is the in-memory fake the server tests use, over HTTP; and a stand-in
  * for Checkout's script, which draws a small dialog with a button for each thing a
  * buyer can do on Razorpay's page. Nothing here reaches Razorpay.

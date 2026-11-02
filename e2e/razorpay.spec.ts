@@ -1,6 +1,6 @@
 /**
  * Server mode taking payment through Razorpay's checkout, end to end, against the
- * stand-in for Razorpay (`playwright.razorpay.config.ts`). Each purchase starts from the
+ * stand-in for Razorpay (`e2e/config/razorpay.config.ts`). Each purchase starts from the
  * event page, as a buyer's does, so the checkout is reached without a document load:
  * the policy that lets Checkout in has to be the one the event page was served with.
  */

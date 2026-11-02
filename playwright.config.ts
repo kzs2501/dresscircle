@@ -29,7 +29,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      // Razorpay's flows need a build that takes payment through it (playwright.razorpay.config.ts).
+      // Razorpay's flows need a build that takes payment through it (e2e/config/razorpay.config.ts).
       testIgnore: [/camera\.spec\.ts/, /razorpay\.spec\.ts/],
       grepInvert: /@perf/,
     },

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -7,6 +8,8 @@ import { defineConfig, devices } from "@playwright/test";
  * chaos presets or its state. Postgres comes from `npm run db:up`, or DATABASE_SERVER_URL;
  * each run gets an empty database, migrated before the app starts.
  */
+/** Paths here start from the repository's root, not this folder. */
+const ROOT = path.resolve(__dirname, "../..");
 const isCI = Boolean(process.env["CI"]);
 const PORT = 4182;
 const server = process.env["DATABASE_SERVER_URL"] ?? "postgres://admit@localhost:54329";
@@ -18,14 +21,14 @@ interface ServerModeOptions {
 }
 
 export default defineConfig<object, ServerModeOptions>({
-  testDir: "e2e",
+  testDir: path.join(ROOT, "e2e"),
   grep: /@both/,
   // One test at a time: they share the database, whose stock each test starts from.
   workers: 1,
   retries: isCI ? 1 : 0,
   globalTimeout: 10 * 60_000,
   reporter: isCI ? "github" : "list",
-  outputDir: "test-results/server",
+  outputDir: path.join(ROOT, "test-results/server"),
   use: {
     baseURL: `http://localhost:${String(PORT)}`,
     trace: isCI ? "on-first-retry" : "retain-on-failure",
@@ -34,6 +37,7 @@ export default defineConfig<object, ServerModeOptions>({
   webServer: {
     command: `node scripts/db.mjs reset dresscircle_e2e && npx drizzle-kit migrate && npx next start -p ${String(PORT)}`,
     port: PORT,
+    cwd: ROOT,
     reuseExistingServer: false,
     env: {
       NEXT_DIST_DIR: ".next-server",

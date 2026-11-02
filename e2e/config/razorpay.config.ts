@@ -1,5 +1,6 @@
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
-import { createFakeRazorpay } from "./src/backend/razorpay/testing/fake-razorpay";
+import { createFakeRazorpay } from "../../src/backend/razorpay/testing/fake-razorpay";
 
 /**
  * Server mode taking payment through Razorpay, end to end, against a stand-in for
@@ -7,6 +8,8 @@ import { createFakeRazorpay } from "./src/backend/razorpay/testing/fake-razorpay
  * points the payment page at the stand-in's Checkout. No secrets and no network, so it
  * runs on CI. The real thing is `npm run test:e2e:razorpay-live`.
  */
+/** Paths here start from the repository's root, not this folder. */
+const ROOT = path.resolve(__dirname, "../..");
 const isCI = Boolean(process.env["CI"]);
 const PORT = 4183;
 const FAKE_PORT = 4191;
@@ -15,14 +18,14 @@ const databaseUrl = `${server}/dresscircle_razorpay_e2e`;
 const { settings } = createFakeRazorpay();
 
 export default defineConfig<object, { databaseUrl: string | null }>({
-  testDir: "e2e",
+  testDir: path.join(ROOT, "e2e"),
   testMatch: /razorpay\.spec\.ts/,
   // One test at a time: they share the database, whose stock each test starts from.
   workers: 1,
   retries: isCI ? 1 : 0,
   globalTimeout: 10 * 60_000,
   reporter: isCI ? "github" : "list",
-  outputDir: "test-results/razorpay",
+  outputDir: path.join(ROOT, "test-results/razorpay"),
   use: {
     baseURL: `http://localhost:${String(PORT)}`,
     trace: isCI ? "on-first-retry" : "retain-on-failure",
@@ -32,12 +35,14 @@ export default defineConfig<object, { databaseUrl: string | null }>({
     {
       command: "npx tsx e2e/fake-razorpay/server.ts",
       url: `http://localhost:${String(FAKE_PORT)}/health`,
+      cwd: ROOT,
       reuseExistingServer: false,
       env: { FAKE_RAZORPAY_PORT: String(FAKE_PORT), APP_URL: `http://localhost:${String(PORT)}` },
     },
     {
       command: `node scripts/db.mjs reset dresscircle_razorpay_e2e && npx drizzle-kit migrate && npx next start -p ${String(PORT)}`,
       port: PORT,
+      cwd: ROOT,
       reuseExistingServer: false,
       env: {
         NEXT_DIST_DIR: ".next-razorpay",

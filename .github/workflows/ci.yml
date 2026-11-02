@@ -91,7 +91,7 @@ jobs:
       - uses: ./.github/actions/next-cache
       - run: npm run build
       - name: Lighthouse budgets
-        run: npx lhci autorun
+        run: npm run lhci
       # The buyer's pages on a mid-range phone: performance at least 0.85, below desktop's
       # 0.95. A laptop scores them 0.93 to 0.94; this runner, 0.84 to 0.92 a run, from
       # React and Next starting up and the sandbox's backend, which every page pays
@@ -167,7 +167,7 @@ jobs:
       - run: npm ci
       - run: npm run build-storybook
       - name: Screenshots of every story, in both themes and at 375 px, with axe
-        run: npx playwright test --config=playwright.visual.config.ts
+        run: npx playwright test --config=e2e/config/visual.config.ts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:

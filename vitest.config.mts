@@ -16,7 +16,7 @@ export default defineConfig({
           // `// @vitest-environment node` docblock.
           environment: "jsdom",
           globals: true,
-          setupFiles: ["./vitest.setup.ts"],
+          setupFiles: ["./src/testing/setup.ts"],
           include: ["src/**/*.test.{ts,tsx}"],
           // The server backend's tests need Postgres; they're the `server` project.
           exclude: [...configDefaults.exclude, "src/backend/postgres/**"],
