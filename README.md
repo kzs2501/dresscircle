@@ -1,27 +1,54 @@
 # Dress Circle
 
-**A ticket box office you can try for free, and break on purpose.** Formerly admit-one
-([why the name changed, and what kept the old one](docs/decisions/021-renamed-dress-circle.md)).
+[![CI](https://github.com/kzs2501/dresscircle/actions/workflows/ci.yml/badge.svg)](https://github.com/kzs2501/dresscircle/actions/workflows/ci.yml)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
-Timed ticket holds that can't oversell, a seat map you can use with a keyboard, prices
-that are all in from the first screen, card or UPI, a typed step registry driven by the
-URL, idempotent payments, deduplicated webhooks, and an order page that waits for the
-truth instead of trusting a redirect. Organisers get their own dashboard: live sales, an
-11,000-order table that stays fast and accessible, and refunds. Tickets open in airplane
-mode, and a door scanner checks them with no connection at all. Pick a failure from the
-chaos panel (a declined card, a webhook that arrives twice, a hold that expires
-mid-payment, a crowd buying the last ticket) and watch the checkout handle it while the
-server log explains why.
+**A ticket box office you can try, and break on purpose.** Seat maps, a fair flash-sale
+queue, card and UPI, tickets that open offline, and a chaos panel that makes payments
+fail while the server log explains why. Formerly admit-one
+([why the name changed](docs/decisions/021-renamed-dress-circle.md)).
 
-The first page is the box office: search and filters kept in the URL, a live strip of what
-is being held and sold (in the sandbox, simulated buyers keep it busy, and say so), and
-one click to each hard part ([decision](docs/decisions/023-a-box-office-first.md)).
+**[Try the sandbox](https://dresscircle.vercel.app)**: no sign-up, no keys, no real
+payments. The backend runs in your browser, so your sandbox is yours alone.
+**[Server mode](https://dresscircle-server.vercel.app)**: the same app on Postgres,
+taking payment through Razorpay's test mode.
 
-**[Live demo](https://dresscircle.vercel.app)** · No sign-up, no keys, no real payments. The backend runs in your
-browser, so your sandbox is yours alone. The same checkout in server mode, on Postgres:
-**[dresscircle-server](https://dresscircle-server.vercel.app)**.
+![The first page: search and filters, a live strip of what the box office is doing (simulated buyers, labelled), and the events with the fewest tickets left](docs/images/home.png)
 
-![A completed order with the chaos panel open: the server log shows a duplicate webhook being ignored](docs/images/chaos-panel.png)
+## Contents
+
+- [Where to look](#where-to-look)
+- [Try it](#try-it)
+- [How it works](#how-it-works)
+- [Running it](#running-it)
+- [Quality](#quality)
+- [Documentation](#documentation)
+- [Known limits](#known-limits)
+- [Licence](#licence)
+
+## Where to look
+
+Each hard part, and the files to open first. [The hard parts](docs/hard-parts.md) tell
+each story in full, and [the decision records](docs/decisions/) say why.
+
+| Hard part                                                                                                                   | Start with                                                                                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. [Holds that can't oversell](docs/hard-parts.md#1-holds-that-cant-oversell-and-expire-without-a-timer)                    | [`inventory.ts`](src/backend/domain/inventory.ts) · [`stock.ts`](src/backend/postgres/stock.ts)                                                                                      |
+| 2. [A checkout driven by the URL](docs/hard-parts.md#2-a-typed-step-registry-driven-by-the-url)                             | [`step-registry.ts`](src/features/checkout/domain/step-registry.ts) · [`[step]/page.tsx`](src/app/checkout/%5BholdId%5D/%5Bstep%5D/page.tsx)                                         |
+| 3. [The webhook decides, not the redirect](docs/hard-parts.md#3-the-webhook-not-the-redirect-decides)                       | [`payments.ts`](src/backend/domain/payments.ts) · [`webhooks.ts`](src/backend/domain/webhooks.ts) · [`use-order-status.ts`](src/features/orders/hooks/use-order-status.ts)           |
+| 4. [Payment after the hold expired](docs/hard-parts.md#4-payment-after-the-hold-expired)                                    | [`order-machine.ts`](src/backend/domain/order-machine.ts)                                                                                                                            |
+| 5. [A seat map you can use with a keyboard](docs/hard-parts.md#5-a-seat-map-you-can-use-with-a-keyboard)                    | [`seat-grid.ts`](src/features/events/domain/seat-grid.ts) · [`seat-grid.tsx`](src/features/events/components/seat-map/seat-grid.tsx) · [`seating.ts`](src/backend/domain/seating.ts) |
+| 6. [A waiting room, and a limit on trying](docs/hard-parts.md#6-a-waiting-room-and-a-limit-on-trying)                       | [`queue.ts`](src/backend/domain/queue.ts) · [`waiting-room.tsx`](src/features/queue/components/waiting-room.tsx) · [`rate-limit.ts`](src/backend/http/rate-limit.ts)                 |
+| 7. [All-in prices, GST included](docs/hard-parts.md#7-the-price-you-see-is-the-price-you-pay)                               | [`pricing.ts`](src/core/pricing.ts)                                                                                                                                                  |
+| 8. [UPI, settled by webhook](docs/hard-parts.md#8-upi-approved-in-another-app-settled-by-webhook)                           | [`upi.ts`](src/backend/domain/upi.ts) · [`use-upi-payment.ts`](src/features/checkout/hooks/use-upi-payment.ts)                                                                       |
+| 9. [Organisers' access, checked twice](docs/hard-parts.md#9-an-organisers-dashboard-with-access-checked-twice)              | [`access.ts`](src/backend/domain/access.ts)                                                                                                                                          |
+| 10. [Eleven thousand orders in a real table](docs/hard-parts.md#10-eleven-thousand-orders-in-a-table-that-stays-a-table)    | [`reporting.ts`](src/backend/domain/reporting.ts) · [`orders-table.tsx`](src/features/organiser/components/orders-table.tsx)                                                         |
+| 11. [Refunds, optimistic and honest](docs/hard-parts.md#11-refunds-optimistic-and-honest)                                   | [`refunds.ts`](src/backend/domain/refunds.ts) · [`use-refund.ts`](src/features/organiser/hooks/use-refund.ts)                                                                        |
+| 12. [Every state in a catalogue, every pixel checked](docs/hard-parts.md#12-every-state-in-a-catalogue-every-pixel-checked) | [`sandbox.ts`](.storybook/sandbox.ts) · [`stories.spec.ts`](visual/stories.spec.ts)                                                                                                  |
+| 13. [The same API on Postgres](docs/hard-parts.md#13-the-same-api-on-postgres-and-races-the-database-cant-lose)             | [`unit-of-work.ts`](src/backend/postgres/unit-of-work.ts) · [`stock.ts`](src/backend/postgres/stock.ts) · [`buyer-contract.ts`](src/backend/testing/buyer-contract.ts)               |
+| 14. [Tickets that work in a basement](docs/hard-parts.md#14-tickets-that-work-in-a-basement)                                | [`ticket-token.ts`](src/core/ticket-token.ts) · [`wallet.ts`](src/lib/wallet.ts) · [`sw.js`](public/sw.js) · [`check-ticket.ts`](src/features/scanner/domain/check-ticket.ts)        |
+| 15. [A real payment provider (Razorpay)](docs/hard-parts.md#15-a-real-payment-provider-and-money-that-cant-stay)            | [`provider-payments.ts`](src/backend/domain/provider-payments.ts) · [`signatures.ts`](src/backend/razorpay/signatures.ts)                                                            |
+| 16. [A box office first](docs/hard-parts.md#16-a-box-office-first-the-system-underneath)                                    | [`page.tsx`](src/app/page.tsx) · [`activity.ts`](src/backend/domain/activity.ts) · [`event-filters.ts`](src/features/events/domain/event-filters.ts)                                 |
 
 ## Try it
 
@@ -34,7 +61,7 @@ is also an end-to-end test that checks both what you see and what the server rec
 | Declined card              | The bank says no                                       | Inline error, details kept, retry with another card                              |
 | 3-D Secure                 | The bank wants authentication                          | A challenge dialog; it survives a page refresh                                   |
 | Slow network               | Every request takes ~3 s                               | Loading states; a double-click reserves once and pays once                       |
-| Connection drops           | The payment's answer is lost; then a few status checks | Paying again replays the first answer — one charge; the page keeps what it knows |
+| Connection drops           | The payment's answer is lost; then a few status checks | Paying again replays the first answer (one charge); the page keeps what it knows |
 | Webhook arrives twice      | At-least-once delivery                                 | One set of tickets; the duplicate is logged and ignored                          |
 | Webhook before redirect    | The provider beats your browser                        | The order page opens already confirmed                                           |
 | Webhook delayed            | 12 s before confirmation                               | Polling that backs off, then a reassuring note                                   |
@@ -52,231 +79,34 @@ Test cards work too: `4242…` succeeds, `4000 0000 0000 0002` is declined,
 `4000 0025 0000 3155` asks for 3-D Secure. Or pay by UPI, and approve or decline on the
 simulated phone that appears below the checkout.
 
-## The hard parts
-
-### 1. Holds that can't oversell — and expire without a timer
-
-Choosing tickets creates a hold with an `expiresAt`. Availability is
-`capacity − sold − tickets in live holds`, where _live_ means `now < expiresAt`.
-Expiry is **lazy**: an expired hold simply stops counting. There's no sweeper job, so
-there's no window where a dead hold still blocks a buyer, and reads never write.
-([decision](docs/decisions/002-holds-and-lazy-expiry.md))
-
-### 2. A typed step registry, driven by the URL
-
-Each step declares `isApplicable(ctx)` and `isComplete(ctx)`; the flow is whatever
-applies (no extras step for events without extras). The URL —
-`/checkout/[holdId]/[step]` — is the source of truth, so refresh resumes, deep links
-can't skip ahead, and back/forward just work. Drafts persist per hold, and review only
-counts as done if the server's order matches what you typed.
-([decision](docs/decisions/003-step-registry.md))
-
-### 3. The webhook, not the redirect, decides
-
-Paying returns `202 processing` — never "paid". The browser goes to the order page,
-which polls with backoff until the provider's webhook settles the order. Payments carry
-an `Idempotency-Key` minted per _attempt_ (a retry after a network error reuses it, so
-it can never charge twice — the "Connection drops" scenario shows it); webhooks are
-deduplicated by event id. A status check that fails keeps the last known state on
-screen rather than replacing it with an error.
-([decision](docs/decisions/004-payments-and-webhooks.md))
-
-### 4. Payment after the hold expired
-
-Starting a payment extends the hold once, and a payment in flight protects its order.
-If the money still arrives after the tickets are gone, the order is refunded in full and
-the page says why — rather than overselling or quietly keeping the money.
-
-### 5. A seat map you can use with a keyboard
-
-The concert at Rangmanch Auditorium has reserved seating: 998 seats, drawn from static
-data and server-rendered. Each section is a WAI-ARIA grid with one tab stop. The arrow
-keys step over aisles, and Up and Down go to the seat _in front_, not the one with the
-same number. Every seat says its row, number, tier, price and state. Choosing seats is
-all-or-nothing: if one has gone, nothing is held and the server names it. "Best
-available" lets the server choose and hold in one step, keeping a party together
-without stranding a single seat. An e2e budget keeps the longest interaction under
-200 ms with the CPU slowed four times.
-([decision](docs/decisions/010-reserved-seating.md))
-
-### 6. A waiting room, and a limit on trying
-
-In a flash sale, everyone queues first. The line is first in, first out, a batch at a
-time, and your place is computed from when you joined and the clock: nothing ticks, a
-refresh keeps it, and the server says when to check again. The page shows the people
-ahead, a bar that only moves forward and a coarse wait. When your turn comes, it says
-so and moves focus, but doesn't redirect you. Reserving is also rate-limited: the
-fourth try in 15 seconds is a 429 with `Retry-After`, and the page waits exactly that
-long. ([decision](docs/decisions/011-waiting-room-and-rate-limits.md))
-
-### 7. The price you see is the price you pay
-
-Showing a base price and adding fees at checkout is drip pricing, which India's dark
-patterns guidelines and the US FTC's fees rule both ban. So every price on screen is all
-in: the 3% booking fee and GST included, with what it's made of one line away. One
-pricing engine serves the server's charge and every label. GST rules are data: 18% on
-admission, none at ₹500 or less, and 18% on the fee. Tax is worked out per ticket in
-paise, as CGST and SGST halves each rounded, so one ticket's price times the quantity
-is exactly the total. ([decision](docs/decisions/012-gst-and-all-in-pricing.md))
-
-### 8. UPI: approved in another app, settled by webhook
-
-Merchants can't send "collect" requests any more (NPCI, 2026), so a UPI payment is an
-intent. That's a `upi://pay` link, with the merchant category code and a reference
-unique to the payment, shown as a QR code on a computer or opened as the UPI app on a
-phone. The buyer answers in another app, so the page never learns the outcome from the
-browser: it re-reads the order, and the webhook decides. A request runs out after five
-minutes (lazily, like a hold), never outlasts the hold, and can be cancelled to pay by
-card. ([decision](docs/decisions/013-upi-by-intent-and-qr.md))
-
-### 9. An organisers' dashboard, with access checked twice
-
-Sign in as one of three demo accounts across two organisations. Each sees only its own
-events' orders and only what its role allows. The same `can()` rule hides the Refund
-button from the box office and makes the server refuse it anyway. Statuses are exact:
-401 for no session, 403 for an event that isn't yours, and 404 for an order that
-isn't, so its existence isn't confirmed. ([decision](docs/decisions/014-organiser-access.md))
-
-### 10. Nine thousand orders in a table that stays a table
-
-The history is generated from a seed, not stored, and it agrees with the catalogue to
-the ticket. The server filters, sorts (AIP-132) and pages by keyset (AIP-158), so new
-orders between pages can't repeat or skip a row.
-
-- **The table:** TanStack Virtual draws about 30 rows, but it's still a real
-  `<table>`, with spacer rows instead of absolute positioning. `aria-rowcount` and
-  `aria-rowindex` tell screen readers the whole story, and a focused row stays drawn.
-- **The filters:** they live in the URL, and they're optimistic, so they respond at
-  once.
-- **Live updates:** server-sent events read with `fetch` (so they can carry a token)
-  refresh what's on screen, and can be paused. The table offers new rows rather than
-  moving under you.
-
-([decision](docs/decisions/015-reporting-at-scale.md))
-
-### 11. Refunds, optimistic and honest
-
-A refund is an idempotent request settled by webhook, like a payment. The dashboard
-shows "Refund pending" at once, on the order and in every cached table page. If the
-provider refuses, everything rolls back and a focused alert says why. Refunded tickets
-go back on sale, and door scanners refuse the old ones once they've fetched the event's
-list of refunded codes, which they keep for offline. ([decision](docs/decisions/016-refunds.md))
-
-### 12. Every state in a catalogue, every pixel checked
-
-The checkout and the order page render a state; their view-model hooks supply it. So
-every state is a story in a Storybook catalogue, built from data the contract's schemas
-parse, including ones that are hard to reach by clicking. Components that fetch their
-own data run on a fresh copy of the sandbox for every story.
-
-- **Every story is a test:** it renders in Chromium, passes its play function, and has
-  no axe violations.
-- **Every story is a screenshot,** in light and dark, and at 375 px for whole screens,
-  made in Playwright's Linux image on arm64, both on a laptop and in CI. Screenshots
-  only compare on the machine that made them, and emulating Intel on Apple Silicon
-  renders OKLCH colours as white.
-- **It found two bugs at once:** an unlayered `:focus-visible` rule beat every
-  `outline-none`; and a busy button, being `disabled`, could drop keyboard focus (a
-  flaky screenshot, found by running the suite three times over).
-
-([decision](docs/decisions/017-catalogue-and-visual-tests.md))
-
-### 13. The same API on Postgres, and races the database can't lose
-
-Built with `NEXT_PUBLIC_BACKEND=server`, the app talks to a server instead of the
-sandbox: Next route handlers answer `/api/*` with the very handlers the sandbox runs in
-its service worker, over Postgres. The same 14 HTTP contract tests pass on both
-backends, and so do 24 end-to-end flows.
-
-- **Stock and seats:** a hold takes tickets with one conditional update of the tier's
-  row, and seats with a partial unique index. Against real Postgres, 50 buyers at the
-  last 10 tickets get exactly 10, and 20 buyers for one pair of seats get one.
-- **Everything else:** the sandbox's own rules, run on the server's rows under a lock on
-  the hold. Ten payments at once for one order give one charge.
-- **Webhooks:** signed by a simulated provider, checked over the raw body, and acted on
-  once, in the same transaction as their effect. Each is delivered under a lease, and
-  one that fails is retried with backoff rather than holding up the rest. A payment
-  confirmed while its hold was live keeps its tickets, however late its webhook.
-- **Production means production:** without its database, webhook secret, ticket key
-  and fingerprint secret, the server refuses to start, and says which are missing.
-- **A race test that couldn't fail:** on a cold connection pool, the first
-  "simultaneous" request finished before the rest connected. Each test pool now opens
-  every connection first, and a version without the lock fails.
-
-([decision](docs/decisions/018-server-mode.md))
-
-### 14. Tickets that work in a basement
-
-Doors are where networks fail, so neither the ticket nor the check needs one.
-
-- **A ticket is a signed token.** Each one carries its claims and an Ed25519 signature,
-  in its QR code. The door checks it with the public key alone, so a ticket that was
-  changed, or made up, is refused offline.
-- **The wallet is on the device.** Tickets are saved to IndexedDB when they're issued,
-  and `/tickets` opens with no network, after a reload or in a new tab.
-- **One service worker, two jobs.** A scope has one worker, and MSW's already had the
-  site's, so the app's worker imports MSW's. Its own listeners go first. MSW's worker
-  also unregisters itself when its last tab closes, so the merged one keeps its
-  registration, or the wallet would find no worker the next time.
-- **The door scanner** (`/scan`) uses the browser's `BarcodeDetector` where there is
-  one, and ZXing in WebAssembly elsewhere, served from this site. It remembers whom it
-  has let in, in one IndexedDB transaction per scan. Only this page may use the camera
-  or compile WebAssembly, so it's always reached by a full page load: headers are per
-  document.
-- **Refunds reach the door:** a signature can't say a ticket was refunded, so the door
-  fetches its event's refunded codes while online, keeps them, and says when it last
-  checked.
-- **Tested with a fake camera:** Chromium plays a video of a signed ticket, and the
-  scanner reads it. Then the same ticket, after a reload, reads as already scanned.
-
-([decision](docs/decisions/019-offline-tickets-and-door-scanner.md))
-
-### 15. A real payment provider, and money that can't stay
-
-[Server mode](https://dresscircle-server.vercel.app) takes payment through Razorpay's test
-mode: no real money moves.
-
-- **Card details never reach this server.** Checkout is Razorpay's page, in a frame of
-  its own, and 3-D Secure runs at the bank, not in a dialog anyone with a payment's id
-  could approve.
-- **Two ways to hear about a payment, one rule.** Razorpay's webhook, or Checkout's
-  result, signed with the key secret and checked against Razorpay before it's believed.
-  Whichever comes second finds the payment settled.
-- **A capture that can't become tickets is refunded,** through Razorpay's API: paid
-  after the hold ran out, for a checkout the buyer gave up on and then paid anyway, or
-  for the wrong amount. Refunds are an outbox, retried until they work, and each first
-  asks Razorpay whether it's needed, so a lost reply never refunds twice.
-- **Webhooks without timestamps:** Razorpay's can't be refused for their age, so each is
-  acted on once, by its event id, and a payment settles once whatever reports it.
-- **Found on the way:** an event for an order that had moved on used to be dropped,
-  harmless with simulated money and a kept payment with real money. And any command on
-  a sold order had always failed with a 500.
-- **Tested without the network:** the server against an in-memory Razorpay, and the
-  browser against a stand-in whose Checkout is a dialog of buttons, both in CI. The real
-  Checkout was opened under the security policy, which found one more origin it needed.
-
-([decision](docs/decisions/020-razorpay-test-mode.md))
+![A completed order with the chaos panel open: the server log shows a duplicate webhook being ignored](docs/images/chaos-panel.png)
 
 ## How it works
 
+The app talks to its backend only over HTTP, so the same code runs against two backends:
+one in your browser, and one on a server. The same contract tests pass against both.
+
 ```mermaid
 flowchart LR
-  subgraph Browser tab
-    UI["Next.js UI<br/>(TanStack Query, RHF + Zod)"] -->|"fetch /api/*"| SW["MSW service worker"]
-    SW --> H["HTTP adapter<br/>problem+json · idempotency · ISO times"]
-    H --> S["Domain<br/>holds · orders · payments · webhooks"]
-    S <--> P[("sessionStorage<br/>state + webhook outbox")]
-    S --> R["Runtime<br/>delivers due webhooks"]
-    R --> S
-    C["Chaos panel"] -.->|preset + live log| S
+  UI["The app<br/>Next.js, TanStack Query,<br/>React Hook Form + Zod"]
+  subgraph sandbox ["Sandbox: in the browser tab"]
+    SW["MSW service worker"] --> H1["HTTP handlers"]
+    H1 --> D1["Domain rules<br/>holds, orders, payments, webhooks"]
+    D1 <--> SS[("sessionStorage<br/>state, webhook outbox")]
+    C["Chaos panel"] -.->|"preset, live log"| D1
   end
+  subgraph server ["Server mode: on Vercel"]
+    RH["Next route handlers"] --> H2["The same handlers and rules"]
+    H2 --> PG[("Postgres<br/>row locks, unique indexes")]
+  end
+  RZ["Razorpay, test mode"] -->|"signed webhooks"| RH
+  UI -->|"fetch /api/*"| SW
+  UI -->|"fetch /api/*"| RH
 ```
 
-The app's code is written exactly as it would be against a real API: plain `fetch`, real
-status codes, real headers, and every response parsed against the contract's schemas.
 The backend (`src/backend/`) is plain TypeScript with an injectable clock, so every rule
 is unit-tested without a browser. The layers, and the lint rules that enforce them, are
-in [docs/architecture.md](docs/architecture.md).
+in [docs/architecture.md](docs/architecture.md). A payment, start to finish:
 
 ```mermaid
 sequenceDiagram
@@ -286,9 +116,9 @@ sequenceDiagram
   B->>S: POST /orders/:id/payments (Idempotency-Key)
   S->>P: charge
   S-->>B: 202 processing
-  Note over B: go to /orders/:id — not "paid" yet
+  Note over B: go to /orders/:id, not "paid" yet
   P-->>S: webhook payment.succeeded (maybe twice, maybe first)
-  S->>S: dedupe by event id → paid → fulfilled
+  S->>S: dedupe by event id, then paid, then fulfilled
   loop 0.5s, 1s, 2s, 4s…
     B->>S: GET /orders/:id
   end
@@ -299,40 +129,15 @@ sequenceDiagram
 
 So anyone can run the demo with zero setup, every visitor gets an isolated sandbox, and
 the chaos panel can genuinely control the server. MSW runs handlers in the page, so the
-server's state — including webhooks still waiting to be delivered — is persisted to
+server's state (including webhooks still waiting to be delivered) is persisted to
 sessionStorage and resumes after a reload: the outbox pattern.
 
 **What the sandbox doesn't exercise:** true multi-client concurrency. In the browser the
 backend is single-threaded, so a hold is atomic by construction, and contention is
 simulated by a crowd of bot buyers. Server mode exercises the real thing: the same API
 on Postgres, where the database itself refuses an oversold tier or a seat held twice
-(see 13 above). The default build never loads it.
+([hard part 13](docs/hard-parts.md#13-the-same-api-on-postgres-and-races-the-database-cant-lose)). The default build never loads it.
 ([decision](docs/decisions/001-simulated-backend.md))
-
-## Quality
-
-| Check                        | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run lint` + `typecheck` | strict TypeScript (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, …) and type-aware ESLint: naming conventions, exhaustive switches, and the layer boundaries                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `npm test`                   | 675 unit, component and HTTP-contract tests: signed tickets (tampered, forged, unknown keys), the door's decisions (refunded tickets too), its scan log (two scans at once) and its camera (released when the page goes, paused while hidden), whom the door's keyring trusts, the service worker's URL per build, the wallet, the catalogue's fixtures against the contract, permissions and tenant isolation, keyset paging, CSV escaping and its download, metrics in the organiser's time zone, refunds and their keys, the live stream (a catch-up, a garbled event), the virtualised table's ARIA and focus under filtering and sorting, the search box's debounce, optimistic rollback, pricing and GST, UPI intents, expiry and cancelling, inventory, the order state machine (every legal and illegal transition), idempotency and its fingerprint, webhook dedupe, persistence, problem details, the server's settings per environment, the API client's errors and time-outs, the view-model state machines, the step registry, countdown maths, money and validation, the hall's geometry, the seat allocator (never stranding a seat), the seat map's keyboard model and its focus, the live regions, the waiting room's line and the rate limiter                                                               |
-| `npm run test:server`        | 93 tests of the server backend against real Postgres: concurrent holds and seats, ten payments at once, Idempotency-Keys across processes and who owns a claim, signed webhooks (forged, altered, replayed, duplicated, rotated), a delivery that fails and is retried, a payment confirmed in time but delivered late, deadlocks retried, the rate limit per client (the sandbox's answers, a burst held to the limit), limits on input and bodies streamed past them, logs without buyers' data, the seed and the status constraints, and the shared HTTP contract                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `npm run test:coverage`      | the same, with coverage floors per layer: core, contract, the backend domain and HTTP adapter, the checkout, door and dashboard rules, `src/lib`, the order page's polling and the wallet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `npm run test:stories`       | 113 stories, each a test in Chromium: it renders, passes its play function (keyboard models, focus after a dialog, permissions, reserving on the sandbox) and has no axe violations                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `npm run test:visual`        | 273 screenshots: every story in light and dark, and whole screens at 375 px, compared in Playwright's Linux image on arm64, with axe in both themes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `npm run test:e2e`           | 100 browser tests (32 of them also run against server mode, `npm run test:e2e:server`, and 4 more pay through Razorpay's checkout against a stand-in, `npm run test:e2e:razorpay`): one per chaos preset, each checking what the server recorded, plus tickets offline (after a reload, in a new tab), the door scanner by photo and by a fake camera (once only, forged, another event, refunded, offline), the door reached by its link with its own headers, the camera and WebAssembly allowed on `/scan` alone, the home page (filters in the URL, the live strip, the shortcuts, 320 px), the organisers' dashboard (filters in the URL, an 11,000-row table, CSV, refunds and their rollback, access, live updates, axe), paying by UPI (approved, declined, expired, cancelled, after a refresh), all-in prices, a flash sale through the waiting room, a rate limit waited out, a keyboard-only seat purchase, best available, axe on the seat map, security headers and the content security policy (buying, the wallet, the door, the dashboard), the image optimiser switched off, four font files per page, refresh-resume (mid-form and mid-payment), step guards, expiry and re-reserve, threshold announcements, focus management, hover contrast, axe (WCAG 2.2 AA) in light and dark, 375 px, reduced motion |
-| `npm run test:e2e:perf`      | 2 responsiveness budgets, run on their own and never retried: choosing seats and filtering 11,000 orders stay under 200 ms with the CPU slowed four times                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `npm run lhci`               | Lighthouse on desktop, six pages: performance, accessibility and best practices ≥ 95 on every one, and SEO ≥ 90 on the buyer's pages (the dashboard and the door aren't indexed). Last run: 100 in all four on every buyer's page, and 99 for the door's performance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `npm run lhci:mobile`        | the home page and both event pages on a mid-range phone: performance ≥ 85 ([ADR 010](docs/decisions/010-reserved-seating.md)), the other categories ≥ 95, and at most 420 KB of script. Last run on a laptop: 92 (the home page), 93 and 92 (the seat map); on GitHub's runner, 95, 95 and 93 at best of three; 100 in every other category                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-
-Accessibility details worth knowing: focus moves to each step's heading; the countdown
-is announced at 2 min, 1 min and 30 s rather than every second; errors are linked to
-their fields and the first one gets focus; the chaos panel and 3-D Secure challenge are
-native `<dialog>`s.
-
-Money is an integer amount in minor units together with its currency (the events are
-priced in INR), priced by one engine (`core/pricing.ts`) on both the client and the
-server, so the price you see is the price that's charged. Errors are RFC 9457 problem
-details — see [docs/api.md](docs/api.md).
 
 ## Running it
 
@@ -364,12 +169,38 @@ and `RAZORPAY_WEBHOOK_SECRET` (test keys only; the key id at build too) and run
 `npm run dev:server`. Webhooks can't reach a laptop, but Checkout's signed result settles
 the payment all the same.
 
-## Layout
+## Quality
+
+| Check                        | What it covers                                                                                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run lint` + `typecheck` | Strict TypeScript and type-aware ESLint: naming conventions, exhaustive switches, and the layer boundaries                                           |
+| `npm test`                   | 707 unit, component and HTTP-contract tests, with coverage floors per layer (`npm run test:coverage`); among them, every link in the README and docs |
+| `npm run test:server`        | 93 tests against real Postgres: concurrent holds and payments, idempotency across processes, signed webhooks, retries                                |
+| `npm run test:stories`       | 113 stories, each a test in Chromium: it renders, passes its play function, and has no axe violations                                                |
+| `npm run test:visual`        | 273 screenshots, in light, dark and at 375 px, compared in Playwright's Linux image on arm64                                                         |
+| `npm run test:e2e`           | 100 browser tests, one per chaos scenario and many more; 32 also run in server mode, and 4 pay through a stand-in Razorpay                           |
+| `npm run test:e2e:perf`      | Choosing seats and filtering 11,000 orders stay under 200 ms with the CPU slowed four times                                                          |
+| `npm run lhci`               | Lighthouse on desktop: 100 in all four categories on every buyer's page                                                                              |
+| `npm run lhci:mobile`        | On a mid-range phone: 95, 95 and 93 for performance in CI, and under 420 KB of script                                                                |
+
+What each suite covers in detail, and notes on accessibility and money:
+[docs/quality.md](docs/quality.md).
+
+## Documentation
+
+- [The hard parts](docs/hard-parts.md): sixteen problems, each solved properly
+- [Architecture](docs/architecture.md): the layers, and the lint rules that keep them apart
+- [API](docs/api.md): every endpoint, its errors, and what may be cached
+- [Conventions](docs/conventions.md): naming and code style
+- [Quality](docs/quality.md): what each test suite covers
+- [Decision records](docs/decisions/): twenty-three, from the simulated backend to the box office first page
+- [Contributing](CONTRIBUTING.md): the checks, commit conventions and review checklist
+- [Security](SECURITY.md): the threat model, and how to report a vulnerability
 
 ```
 src/
   app/              routes, error boundaries, providers; /problems documents every error type
-  features/         events · checkout · orders · queue · organiser · sandbox · tickets · scanner — view-model hooks and their components
+  features/         events · checkout · orders · queue · organiser · sandbox · tickets · scanner: view-model hooks and their components
   components/ui/    design-system primitives (Button, TextField, Notice, ErrorState, …)
   lib/              API client, query factories, routes, safe storage, formatting, the wallet,
                     the door's keys, scan log and QR reader, the service worker's registration
@@ -380,14 +211,13 @@ src/
   instrumentation-client.ts   starts the backend before the app is interactive
 public/sw.js        the one service worker: offline pages, then MSW's for the sandbox
 docs/               architecture, conventions, API, and decision records
-e2e/                Playwright, with page objects in fixtures.ts
+e2e/                Playwright, with page objects in fixtures.ts; config/ holds the server,
+                    Razorpay and screenshot runs
+lighthouse/         the Lighthouse budgets, desktop and mobile
 drizzle/            SQL migrations for server mode, generated from the schema
 .storybook/         the catalogue's config, and the sandbox each story runs on
 visual/             screenshot tests of every story, and their baselines
 ```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks, commit conventions and review
-checklist.
 
 ## Known limits
 
@@ -422,14 +252,13 @@ Choices made on purpose, and what each one costs:
   (cards, net banking, wallets, UPI) is the Razorpay account's to say.
 - **The organisers' dashboard and the waiting room** run in the sandbox only.
 
-## Not in v0.1
+## Not in v1
 
 Buyer accounts, emails, real authentication, live payments, organisers' refunds through
 Razorpay (the dashboard runs in the sandbox), and door scanners that share what they've
 seen (each remembers only its own scans).
 
----
+## Licence
 
-Built by [Kshitiz Sonakiya](https://github.com/kzs2501). All events, venues and
+[MIT](LICENSE). Built by [Kshitiz Sonakiya](https://github.com/kzs2501). All events, venues and
 people are fictional.
-[MIT licensed](LICENSE) · [Security: the threat model, and reporting a vulnerability](SECURITY.md)
