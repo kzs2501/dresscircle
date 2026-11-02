@@ -3,12 +3,23 @@
 ## Setup
 
 ```bash
-nvm use            # Node 22 (see .nvmrc)
+nvm use            # Node 26 (see .nvmrc)
 npm install        # also installs the git hooks (husky)
 npm run dev        # http://localhost:3000
 ```
 
 No environment variables, keys or accounts are needed: the backend runs in the browser.
+
+**One Node.js major everywhere.** `.nvmrc` (this laptop and CI), `engines` (Vercel builds
+with it) and `@types/node` name the same major, and a unit test fails if they part. Vercel
+reads a range such as `>=22` as "the newest", so `engines` names the major exactly.
+
+**Install scripts run only once reviewed.** npm 11.20 skips dependencies' install scripts
+unless `allowScripts` in `package.json` lists them, pinned to the version that was read.
+After an update, `npm install-scripts ls` names any that need a look; `npm install-scripts
+approve <pkg>` records the review. Embedded Postgres needs its script (it links the
+libraries its binaries load), so a version bump that isn't re-approved fails the server
+tests rather than passing quietly.
 
 ## Checks
 

@@ -171,17 +171,17 @@ the payment all the same.
 
 ## Quality
 
-| Check                        | What it covers                                                                                                                                       |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run lint` + `typecheck` | Strict TypeScript and type-aware ESLint: naming conventions, exhaustive switches, and the layer boundaries                                           |
-| `npm test`                   | 707 unit, component and HTTP-contract tests, with coverage floors per layer (`npm run test:coverage`); among them, every link in the README and docs |
-| `npm run test:server`        | 93 tests against real Postgres: concurrent holds and payments, idempotency across processes, signed webhooks, retries                                |
-| `npm run test:stories`       | 113 stories, each a test in Chromium: it renders, passes its play function, and has no axe violations                                                |
-| `npm run test:visual`        | 273 screenshots, in light, dark and at 375 px, compared in Playwright's Linux image on arm64                                                         |
-| `npm run test:e2e`           | 100 browser tests, one per chaos scenario and many more; 32 also run in server mode, and 4 pay through a stand-in Razorpay                           |
-| `npm run test:e2e:perf`      | Choosing seats and filtering 11,000 orders stay under 200 ms with the CPU slowed four times                                                          |
-| `npm run lhci`               | Lighthouse on desktop: 100 in all four categories on every buyer's page                                                                              |
-| `npm run lhci:mobile`        | On a mid-range phone: 95, 95 and 93 for performance in CI, and under 420 KB of script                                                                |
+| Check                        | What it covers                                                                                                                                                                                             |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run lint` + `typecheck` | Strict TypeScript and type-aware ESLint: naming conventions, exhaustive switches, and the layer boundaries                                                                                                 |
+| `npm test`                   | 709 unit, component and HTTP-contract tests, with coverage floors per layer (`npm run test:coverage`); among them, every link in the README and docs, and one Node.js major for this laptop, CI and Vercel |
+| `npm run test:server`        | 93 tests against real Postgres: concurrent holds and payments, idempotency across processes, signed webhooks, retries                                                                                      |
+| `npm run test:stories`       | 113 stories, each a test in Chromium: it renders, passes its play function, and has no axe violations                                                                                                      |
+| `npm run test:visual`        | 273 screenshots, in light, dark and at 375 px, compared in Playwright's Linux image on arm64                                                                                                               |
+| `npm run test:e2e`           | 100 browser tests, one per chaos scenario and many more; 32 also run in server mode, and 4 pay through a stand-in Razorpay                                                                                 |
+| `npm run test:e2e:perf`      | Choosing seats and filtering 11,000 orders stay under 200 ms with the CPU slowed four times                                                                                                                |
+| `npm run lhci`               | Lighthouse on desktop: 100 in all four categories on every buyer's page                                                                                                                                    |
+| `npm run lhci:mobile`        | On a mid-range phone: 95, 95 and 93 for performance in CI, and under 420 KB of script                                                                                                                      |
 
 What each suite covers in detail, and notes on accessibility and money:
 [docs/quality.md](docs/quality.md).
