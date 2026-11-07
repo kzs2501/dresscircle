@@ -18,11 +18,6 @@ updates:
       # not whenever Node ships a new major.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # Postgres.js 4 rewrote everything below its API (pool, protocol, sockets) and arrived
-      # four days old with no patch yet. Server mode takes payments over Neon's TLS pool, which
-      # CI's Postgres doesn't exercise: wait for 4.0.1, then check it against Neon first.
-      - dependency-name: "postgres"
-        versions: ["4.0.0"]
   - package-ecosystem: github-actions
     # The workflows, and the composite actions they share.
     directories: ["/", "/.github/actions/*"]
