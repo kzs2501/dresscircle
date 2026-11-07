@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * The simulated backend, for stories. Components that fetch their own data talk to the
  * same HTTP handlers as the app, through the same service worker, but each story gets
@@ -48,8 +49,13 @@ const handlersFor = (backend: Backend) =>
   });
 
 const worker = setupWorker();
-// Anything that isn't /api/* (modules, fonts) goes to the network as usual.
-const started = worker.start({ onUnhandledFrame: "bypass", quiet: true });
+// Anything that isn't /api/* (modules, fonts) goes to the network as usual. The worker
+// sits beside the stories, which the published catalogue serves from a subfolder.
+const started = worker.start({
+  serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },
+  onUnhandledFrame: "bypass",
+  quiet: true,
+});
 // Every API request waits for the worker, as it does in the app.
 setApiReadiness(started);
 

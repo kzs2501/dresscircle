@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/kzs2501/dresscircle/actions/workflows/ci.yml/badge.svg)](https://github.com/kzs2501/dresscircle/actions/workflows/ci.yml)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![Storybook](https://img.shields.io/badge/storybook-catalogue-ff4785.svg)](https://kzs2501.github.io/dresscircle/)
 
 **A ticket box office you can try, and break on purpose.** Seat maps, a fair flash-sale
 queue, card and UPI, tickets that open offline, and a chaos panel that makes payments
@@ -12,6 +13,8 @@ fail while the server log explains why. Formerly admit-one
 payments. The backend runs in your browser, so your sandbox is yours alone.
 **[Server mode](https://dresscircle-server.vercel.app)**: the same app on Postgres,
 taking payment through Razorpay's test mode.
+**[The catalogue](https://kzs2501.github.io/dresscircle/)**: the components and the states
+they can be in, in Storybook. Stories that fetch data run on the same in-browser backend.
 
 ![The first page: search and filters, a live strip of what the box office is doing (simulated buyers, labelled), and the events with the fewest tickets left](docs/images/home.png)
 

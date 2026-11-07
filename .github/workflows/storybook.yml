@@ -1,0 +1,53 @@
+name: Storybook
+
+# The component catalogue, published to GitHub Pages so anyone can open the components'
+# states without cloning: https://kzs2501.github.io/dresscircle/. Stories that fetch data run
+# on the in-browser backend, as they do locally.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - ".storybook/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".nvmrc"
+      - ".github/workflows/storybook.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One publish at a time. A newer push waits rather than cutting one off halfway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+# Actions are pinned by commit, with the tag alongside, as in ci.yml.
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build-storybook
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: storybook-static
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
