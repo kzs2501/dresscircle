@@ -242,8 +242,9 @@ not_found`, and isn't recorded, so the provider sends it again later.
   live keeps its tickets, however late the event arrives.
 - **Delivery,** from the simulated provider: right after a payment's response, when the
   buyer next reads the order, and from `GET /api/internal/deliver`, which a scheduler
-  should call every minute or so with `Authorization: Bearer $CRON_SECRET` (without
-  `CRON_SECRET`, the route is a 404). A delivery that fails is tried again, backing off
+  calls every five minutes with `Authorization: Bearer $CRON_SECRET` (without
+  `CRON_SECRET`, the route is a 404): Upstash QStash, with GitHub's schedule as a second
+  trigger ([decision](decisions/024-a-scheduler-that-keeps-time.md)). A delivery that fails is tried again, backing off
   from a second to a minute, ten times at most.
 - **Sandbox-only routes** (the waiting room, the organisers' API) answer
   `501 not_in_server_mode` in server mode.

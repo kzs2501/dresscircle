@@ -196,7 +196,7 @@ What each suite covers in detail, and notes on accessibility and money:
 - [API](docs/api.md): every endpoint, its errors, and what may be cached
 - [Conventions](docs/conventions.md): naming and code style
 - [Quality](docs/quality.md): what each test suite covers
-- [Decision records](docs/decisions/): twenty-three, from the simulated backend to the box office first page
+- [Decision records](docs/decisions/): twenty-four, from the simulated backend to the scheduler that keeps time
 - [Contributing](CONTRIBUTING.md): the checks, commit conventions and review checklist
 - [Security](SECURITY.md): the threat model, and how to report a vulnerability
 

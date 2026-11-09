@@ -90,7 +90,9 @@ internal_error` problem, never a bare 500.
 - **A backstop that doesn't wait for a reader:** `GET /api/internal/deliver`, with
   `Authorization: Bearer $CRON_SECRET`, compared in constant time. Without the secret
   the route doesn't exist (404). Something has to call it every minute or so: Vercel's
-  Hobby crons run daily at most, so it's a Pro cron or a scheduled GitHub Action.
+  Hobby crons run daily at most, so it's a Pro cron or an outside scheduler. It's an
+  Upstash QStash schedule, with GitHub's as a second trigger
+  ([024](024-a-scheduler-that-keeps-time.md)).
 - **Judged when it happened.** A payment confirmed before its hold ran out keeps its
   tickets, however late the webhook arrives: the event carries the provider's own time,
   and the hold's life is judged at that moment. The exception is a hold already swept,

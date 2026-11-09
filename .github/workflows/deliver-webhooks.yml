@@ -2,8 +2,10 @@ name: Deliver due webhooks
 
 # The server-mode deployment delivers the simulated provider's webhooks right after a
 # payment and whenever a buyer reads an order. This is the backstop for a webhook that
-# falls due when nobody is looking (a closed tab): every five minutes, the most often
-# GitHub runs a schedule, ask the server to deliver whatever is due (ADR 018).
+# falls due when nobody is looking (a closed tab): ask the server to deliver whatever is
+# due. An Upstash QStash schedule makes this call every five minutes; GitHub runs
+# schedules when it can (hours apart, in practice), so this one is the second trigger
+# (ADR 024). Two triggers are safe: delivery takes leases, and settling is idempotent.
 #
 # Needs the repository variable SERVER_URL and the secret CRON_SECRET. Without them, as
 # on a fork, it does nothing.
