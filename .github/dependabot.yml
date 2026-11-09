@@ -18,13 +18,14 @@ updates:
       # not whenever Node ships a new major.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # React Query 5.106 changed how a fetch already in flight is reused. With it, an
-      # organiser's refund sometimes stays "Refund pending" after the provider confirms it:
-      # 4 failures in 61 runs of that end-to-end test, against none in 55 on 5.105. CI
-      # retries a failed browser test once, which hides a failure that rare, so a newer
-      # version is tried by running that test 30 times, one at a time, before it's taken.
+      # React Query after 5.105.0 changed how a fetch already in flight is reused (5.106,
+      # then backported to 5.105.3). With it, an organiser's refund sometimes stays "Refund
+      # pending" after the provider confirms it: 4 failures in 61 runs of that end-to-end
+      # test on 5.106.1 and 1 in 60 on 5.105.3, against none in 75 on 5.105.0. CI retries a
+      # failed browser test once, which hides a failure that rare. It stays at 5.105.0
+      # until the cause is found; a candidate runs that test 30 times, one at a time.
       - dependency-name: "@tanstack/react-query"
-        versions: ["5.106.x", "5.107.x"]
+        versions: [">=5.105.1"]
   - package-ecosystem: github-actions
     # The workflows, and the composite actions they share.
     directories: ["/", "/.github/actions/*"]
