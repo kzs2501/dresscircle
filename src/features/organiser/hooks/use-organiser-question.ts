@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrganiserEventDto } from "@/contract/dto";
 import { todayInIndia, type EngineName } from "@/lib/ai/engine";
 import { organiserQuestionTask, type OrganiserQuestion } from "@/lib/ai/tasks/organiser-question";
-import { readQuestion } from "@/features/organiser/domain/question";
+import { readingWithAnswer, readQuestion } from "@/features/organiser/domain/question";
 
 /** One question asked, and how it was read. The answer is worked out from live numbers when shown. */
 export interface Asked {
@@ -76,7 +76,7 @@ export function useOrganiserQuestion(events: readonly OrganiserEventDto[], shown
       controller.current = null;
       setPending(null);
       if (result?.ok) {
-        remember({ text, question: result.answer, engine: result.engine, unused: [] });
+        remember({ text, question: readingWithAnswer(reading, result.answer), engine: result.engine, unused: [] });
       } else {
         remember({ text, question: reading.question, engine: null, unused: reading.unknownWords });
       }

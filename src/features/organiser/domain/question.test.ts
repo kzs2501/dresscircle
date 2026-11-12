@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { CATALOG } from "@/core/catalog";
-import { readQuestion } from "./question";
+import { readingWithAnswer, readQuestion } from "./question";
 
 /** A Friday: this week began on Monday the 9th. */
 const TODAY = "2026-11-13";
@@ -93,5 +93,31 @@ describe("reading an organiser's question", () => {
       hasIntent: true,
       unknownWords: [],
     });
+  });
+});
+
+describe("an engine's reading with the rules' on top", () => {
+  const engine = {
+    intent: "find-orders" as const,
+    event: "night-market-jazz",
+    from: "2026-11-07",
+    to: "2026-11-13",
+    statuses: ["refunded" as const],
+    method: null,
+    search: null,
+    notApplied: [],
+  };
+
+  it("keeps the rules' exact period, statuses, method and buyer, and the engine's kind and event", () => {
+    expect(readingWithAnswer(read("did anyone ask for their money back this week by UPI?"), engine)).toEqual({
+      ...engine,
+      from: "2026-11-09",
+      to: "2026-11-13",
+      method: "upi",
+    });
+  });
+
+  it("takes the engine's where the rules found nothing", () => {
+    expect(readingWithAnswer(read("money back for the jazz night"), engine)).toEqual(engine);
   });
 });

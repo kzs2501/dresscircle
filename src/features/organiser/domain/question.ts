@@ -203,3 +203,23 @@ export function readQuestion(text: string, events: readonly QuestionEvent[], tod
     unknownWords,
   };
 }
+
+/**
+ * An engine's reading of a question with the rules' on top: the engine read the whole
+ * question, so its kind of answer and event stand, but what the rules read is exact
+ * (a period worked out from today, statuses and methods by name, an email or order id),
+ * so where they found one, theirs is kept.
+ */
+export function readingWithAnswer(rules: QuestionReading, engine: OrganiserQuestion): OrganiserQuestion {
+  const exact = rules.question;
+  const hasPeriod = exact.from !== null || exact.to !== null;
+  return {
+    ...engine,
+    event: engine.event ?? exact.event,
+    from: hasPeriod ? exact.from : engine.from,
+    to: hasPeriod ? exact.to : engine.to,
+    statuses: exact.statuses.length > 0 ? exact.statuses : engine.statuses,
+    method: exact.method ?? engine.method,
+    search: exact.search ?? engine.search,
+  };
+}
