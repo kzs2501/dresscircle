@@ -6,6 +6,7 @@
  * key anyone can read here.
  */
 import { RAZORPAY_API_URL, type RazorpaySettings } from "@/backend/razorpay/settings";
+import { clientIpHeaderFrom } from "@/core/client-key";
 import { signDemoTicket } from "@/core/demo-ticket-key";
 import {
   DEFAULT_SERVER_KEY_ID,
@@ -84,8 +85,7 @@ export function serverConfigFrom(env: Environment): ServerConfig {
     signTicket: key ? (claims) => signTicket(claims, key) : signDemoTicket,
     deliverySecret: setting(env, "CRON_SECRET") ?? null,
     fingerprintSecret: setting(env, "FINGERPRINT_SECRET") ?? LOCAL_FINGERPRINT_SECRET,
-    clientIpHeader:
-      setting(env, "TRUSTED_CLIENT_IP_HEADER")?.toLowerCase() ?? (env["VERCEL"] === "1" ? "x-forwarded-for" : null),
+    clientIpHeader: clientIpHeaderFrom(env),
     razorpay: razorpayFrom(env),
   };
 }

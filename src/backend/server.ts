@@ -24,6 +24,7 @@ import { createWebhookReceiver, sendDueWebhooks } from "./postgres/webhooks";
 import { createPostgresRateLimit } from "./postgres/rate-limit";
 import { createRazorpayWebhookReceiver, sendDueCommands, sweepClosedCheckouts } from "./postgres/razorpay";
 import { serverConfigFrom } from "./server-config";
+import { clientKeyOf } from "@/core/client-key";
 
 /** Where the simulated provider's webhooks are addressed: they're handled in-process. */
 const INTERNAL_ORIGIN = "http://dresscircle.internal";
@@ -112,16 +113,8 @@ const logDeliveryError = (error: unknown) => {
  */
 export const DELIVERY_ENDPOINT = "/api/internal/deliver";
 
-/**
- * The rate limit's key for a request: the client's IP from the header a trusted proxy
- * sets (the first address, the client's own, if a list), or null if there's no such
- * header, and so no telling clients apart.
- */
-export function clientKeyOf(request: Request, header: string | null): string | null {
-  if (header === null) return null;
-  const address = request.headers.get(header)?.split(",")[0]?.trim();
-  return address ? `ip:${address}` : null;
-}
+/** The rate limit's key for a request: the client's IP (`core/client-key.ts`). */
+export { clientKeyOf };
 
 /** The bearer token matches the secret: compared as digests, so in constant time whatever the lengths. */
 function isAuthorised(request: Request, secret: string) {
