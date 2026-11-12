@@ -59,6 +59,25 @@ describe("POST /ai/plan", () => {
     expect(messages.at(-1)).toEqual({ role: "user", content: "something mellow by the sea" });
   });
 
+  it("builds an organiser's question too, with every catalogue event to choose from", async () => {
+    const answer = {
+      intent: "find-orders",
+      event: "night-market-jazz",
+      from: null,
+      to: null,
+      statuses: ["refunded"],
+      method: null,
+      search: null,
+      notApplied: [],
+    };
+    const fetch = groqAnswers(answer);
+    vi.stubGlobal("fetch", fetch);
+    const response = await ask({ task: "organiser-question", text: "refunds for the jazz night" });
+    expect(await response.json()).toEqual({ answer });
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.body as string).toContain("night-market-jazz: Night Market Jazz");
+  });
+
   it("is unavailable without a key, and says when to ask again", async () => {
     vi.stubEnv("GROQ_API_KEY", "");
     const response = await ask({ task: "event-search", text: "comedy" });

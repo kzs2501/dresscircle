@@ -16,7 +16,7 @@ export const AI_TIME_ZONE = "Asia/Kolkata";
 export const todayInIndia = (nowMs: number) => zonedDate(nowMs, AI_TIME_ZONE);
 
 /** The tasks the cloud route knows. It builds each from its name, so a caller can't send a prompt of its own. */
-export const AI_TASKS = ["event-search"] as const;
+export const AI_TASKS = ["event-search", "organiser-question"] as const;
 export type AiTaskName = (typeof AI_TASKS)[number];
 
 export interface AiTask<Answer> {

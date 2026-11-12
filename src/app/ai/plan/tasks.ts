@@ -7,9 +7,13 @@ import { CATALOG } from "@/core/catalog";
 import { filterChoices } from "@/features/events/domain/event-filters";
 import { todayInIndia, type AiTask, type AiTaskName } from "@/lib/ai/engine";
 import { eventSearchTask } from "@/lib/ai/tasks/event-search";
+import { organiserQuestionTask } from "@/lib/ai/tasks/organiser-question";
 
 const BUILDERS: Readonly<Record<AiTaskName, (nowMs: number) => AiTask<unknown>>> = {
   "event-search": (nowMs) => eventSearchTask(filterChoices(CATALOG), todayInIndia(nowMs)),
+  // Every event the catalogue lists: the route doesn't know who's asking, so the page
+  // checks the answer against the signed-in account's own events, as the API does.
+  "organiser-question": (nowMs) => organiserQuestionTask(CATALOG, todayInIndia(nowMs)),
 };
 
 export const buildTask = (name: AiTaskName, nowMs: number) => BUILDERS[name](nowMs);
