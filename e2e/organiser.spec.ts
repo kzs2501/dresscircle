@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { getHistory } from "../src/backend/domain/history";
 import { CATALOG, getEvent } from "../src/core/catalog";
 import { formatCount, formatMoney } from "../src/lib/format";
+import type { Page } from "@playwright/test";
 import { axeViolations, expect, test } from "./fixtures";
 
 const LAKESIDE_EVENTS = new Set(
@@ -208,6 +209,90 @@ test("live: other buyers' sales appear without a reload, and pausing stops them"
   await page.getByRole("button", { name: "Pause live updates" }).click();
   await expect(organiser.liveStatus).toHaveText("Live");
   await expect(sold).not.toHaveText(paused ?? "");
+});
+
+test.describe("asking about your sales (ADR 026)", () => {
+  const panel = (page: Page) => page.getByRole("region", { name: "Ask about your sales" });
+  const answers = (page: Page) => panel(page).getByRole("list", { name: "Your questions, newest first" });
+  const ask = async (page: Page, question: string) => {
+    await panel(page).getByRole("textbox", { name: "Your question" }).fill(question);
+    await panel(page).getByRole("textbox", { name: "Your question" }).press("Enter");
+  };
+  const blank = { event: null, from: null, to: null, statuses: [], method: null, search: null, notApplied: [] };
+
+  test("a suggestion counts the refunded orders, and its link opens just those", async ({ page, organiser }) => {
+    await organiser.signInAs(/Nandini Rao/);
+    await panel(page).getByRole("button", { name: "Refunded orders" }).click();
+    const refunded = lakesideOrders.filter((order) => order.status === "refunded").length;
+    await expect(answers(page).getByText(`${formatCount(refunded)} refunded orders.`)).toBeVisible();
+    await expect(answers(page).getByText("Without AI")).toBeVisible();
+
+    await answers(page).getByRole("link", { name: "Open them in the orders table" }).click();
+    await expect(page).toHaveURL(/\/organiser\/orders\?status=refunded$/);
+    await expect(organiser.orderCount).toHaveText(`${formatCount(refunded)} orders`);
+  });
+
+  test("rules read what they can place, with no request to an engine", async ({ page, organiser }) => {
+    const asked: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/ai/plan") asked.push(request.url());
+    });
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, "how buyers paid");
+    await expect(
+      answers(page).getByText(/^Of [\d,]+ paid orders, \d+% by (?:card|UPI), \d+% by (?:card|UPI)\.$/u),
+    ).toBeVisible();
+    await ask(page, "sales in the last 7 days");
+    await expect(answers(page).getByText(/^Across your events, .+: [\d,]+ tickets?, ₹/u)).toBeVisible();
+    await expect(answers(page).getByRole("heading", { level: 3, name: "Tickets sold by day" })).toBeVisible();
+    expect(asked).toEqual([]);
+  });
+
+  test("an engine reads what the rules can't, choosing from the account's own events", async ({ page, organiser }) => {
+    const sent: unknown[] = [];
+    await page.route("**/ai/plan", async (route) => {
+      sent.push(route.request().postDataJSON());
+      await route.fulfill({ json: { answer: { ...blank, intent: "ticket-types", event: "lakeside-lights" } } });
+    });
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, "which shows are doing well?");
+    await expect(answers(page).getByText("AI (free tier)")).toBeVisible();
+    await expect(answers(page).getByText(/^Understood as Ticket types · Lakeside Lights Festival\.$/u)).toBeVisible();
+    await expect(answers(page).getByText(/^Selling best, as a share of its tickets: /u)).toBeVisible();
+    expect(sent).toEqual([{ task: "organiser-question", text: "which shows are doing well?" }]);
+  });
+
+  test("an answer about someone else's event can't pass, and the rules' reading stands", async ({
+    page,
+    organiser,
+  }) => {
+    await page.route("**/ai/plan", (route) =>
+      route.fulfill({ json: { answer: { ...blank, intent: "summary", event: "monsoon-strings" } } }),
+    );
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, "which shows are doing well?");
+    await expect(answers(page).getByText("Without AI")).toBeVisible();
+    await expect(answers(page).getByText("Didn’t use “shows”, “well”.")).toBeVisible();
+    await expect(answers(page).getByText(/^Across your events, you’ve sold /u)).toBeVisible();
+  });
+
+  test("the box office may ask too: it only reads", async ({ page, organiser }) => {
+    await organiser.signInAs(/Arjun Mehta/);
+    await panel(page).getByRole("button", { name: "From reservation to payment" }).click();
+    await expect(answers(page).getByText(/^Of [\d,]+ reservations, /u)).toBeVisible();
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`no axe violations with answers showing (${scheme})`, async ({ page, organiser }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await organiser.signInAs(/Nandini Rao/);
+      await panel(page).getByRole("button", { name: "Which ticket type is selling best?" }).click();
+      await panel(page).getByRole("button", { name: "Sales in the last 7 days" }).click();
+      await expect(answers(page).getByRole("article")).toHaveCount(2);
+      await expect(answers(page).getByRole("heading", { level: 3, name: "Tickets sold by day" })).toBeVisible();
+      expect(await axeViolations(page)).toEqual([]);
+    });
+  }
 });
 
 test.describe("accessibility", () => {
