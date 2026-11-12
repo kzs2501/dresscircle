@@ -120,4 +120,10 @@ describe("an engine's reading with the rules' on top", () => {
   it("takes the engine's where the rules found nothing", () => {
     expect(readingWithAnswer(read("money back for the jazz night"), engine)).toEqual(engine);
   });
+
+  it("keeps the rules' event when the engine names none, and the engine's statuses when the rules found none", () => {
+    expect(
+      readingWithAnswer(read("how is the summit going?"), { ...engine, event: null, statuses: ["failed"] }),
+    ).toMatchObject({ event: "frontend-systems-summit", statuses: ["failed"] });
+  });
 });

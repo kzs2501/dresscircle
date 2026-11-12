@@ -152,17 +152,16 @@ export function answerFor(
     const cut = days.filter((day) => day.date >= from && day.date <= to);
     const tickets = cut.reduce((sum, day) => sum + day.tickets, 0);
     const revenue = cut.reduce((sum, day) => sum + day.revenueMinor, 0);
-    const busiest = cut.reduce<(typeof cut)[number] | undefined>(
-      (best, day) => (day.tickets > (best?.tickets ?? 0) ? day : best),
-      undefined,
-    );
+    const [firstOfCut] = cut;
     const period = formatPeriod(from, to);
-    const sentence =
-      tickets === 0
-        ? `${scope}, ${period}: no tickets sold.`
-        : `${scope}, ${period}: ${formatCount(tickets)} ${tickets === 1 ? "ticket" : "tickets"}, ${formatMoney(revenue, metrics.currency)}.${
-            busiest ? ` The busiest day was ${formatDay(busiest.date)}, with ${formatCount(busiest.tickets)}.` : ""
-          }`;
+    // Any sale means a first day to compare with, and a busiest day.
+    const busiest =
+      firstOfCut && tickets > 0
+        ? cut.reduce((best, day) => (day.tickets > best.tickets ? day : best), firstOfCut)
+        : null;
+    const sentence = busiest
+      ? `${scope}, ${period}: ${formatCount(tickets)} ${tickets === 1 ? "ticket" : "tickets"}, ${formatMoney(revenue, metrics.currency)}. The busiest day was ${formatDay(busiest.date)}, with ${formatCount(busiest.tickets)}.`
+      : `${scope}, ${period}: no tickets sold.`;
     return {
       sentence,
       visual: cut.length > 0 ? { kind: "sales-chart", metrics: { ...metrics, salesByDay: cut } } : { kind: "none" },

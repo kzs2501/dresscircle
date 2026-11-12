@@ -117,8 +117,7 @@ export function readQuestion(text: string, events: readonly QuestionEvent[], tod
   let rest = ` ${normalised(text)} `;
   /** Every match of a phrase, cut out of what's left to read. */
   const take = (pattern: RegExp) => {
-    const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
-    const global = new RegExp(pattern.source, flags);
+    const global = new RegExp(pattern.source, `${pattern.flags}g`);
     const found = [...rest.matchAll(global)].map((match) => [...match]);
     rest = rest.replace(global, " ");
     return found;

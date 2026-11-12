@@ -123,4 +123,46 @@ describe("answers from the dashboard's own numbers", () => {
     expect(formatPeriod("2026-10-28", "2026-11-03")).toBe("28 Oct to 3 Nov 2026");
     expect(formatPeriod("2026-12-28", "2027-01-03")).toBe("28 Dec 2026 to 3 Jan 2027");
   });
+
+  it("says one of everything in the singular, and an empty stretch plainly", () => {
+    const one = {
+      ...METRICS,
+      paidOrders: 1,
+      salesByDay: [{ date: "2026-11-13", tickets: 1, revenueMinor: 50_000 }],
+      paymentMethods: [{ method: "upi" as const, orders: 1 }],
+    };
+    expect(answer({ intent: "sales-over-time" }, { metrics: one })?.sentence).toBe(
+      "Across your events, 7 to 13 Nov 2026: 1 ticket, ₹500.00. The busiest day was 13 Nov 2026, with 1.",
+    );
+    expect(answer({}, { metrics: one })?.sentence).toMatch(/from 1 paid order\.$/u);
+    expect(answer({ intent: "payment-mix" }, { metrics: one })?.sentence).toBe("Of 1 paid order, 100% by UPI.");
+    expect(answer({ intent: "sales-over-time", from: "2026-01-01", to: "2026-01-31" })).toMatchObject({
+      sentence: "Across your events, 1 to 31 Jan 2026: no tickets sold.",
+      visual: { kind: "none" },
+    });
+  });
+
+  it("counts orders from a period open at either end", () => {
+    expect(answer({ intent: "find-orders", from: "2026-11-09" }, { orderCount: 4 })?.sentence).toBe(
+      "4 orders, 9 Nov 2026.",
+    );
+    expect(answer({ intent: "find-orders", to: "2026-11-09" }, { orderCount: 4 })?.sentence).toBe(
+      "4 orders, 9 Nov 2026.",
+    );
+  });
+
+  it("puts a ticket type with no tickets last, and asks for every event's numbers when none is named", () => {
+    const comp = {
+      eventSlug: "night-market-jazz",
+      eventName: "Night Market Jazz",
+      tierId: "c",
+      tierName: "Comp",
+      sold: 0,
+      capacity: 0,
+    };
+    const tiers = [...METRICS.tiers, comp];
+    const ranked = answer({ intent: "ticket-types" }, { metrics: { ...METRICS, tiers } })?.visual;
+    expect(ranked).toMatchObject({ tiers: [{ tierName: "VIP" }, { tierName: "Standing" }, { tierName: "Comp" }] });
+    expect(needsOf(question({}))).toEqual({ kind: "metrics", eventSlug: undefined });
+  });
 });
