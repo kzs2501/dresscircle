@@ -21,6 +21,7 @@
     "test:coverage": "vitest run --project unit --coverage",
     "test:stories": "vitest run --project storybook",
     "test:server": "vitest run --project server",
+    "eval:ai": "vitest run --project evals",
     "db:up": "node scripts/db.mjs up",
     "db:down": "node scripts/db.mjs down",
     "db:generate": "drizzle-kit generate",

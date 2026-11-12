@@ -36,6 +36,12 @@ export default defineConfig({
         },
       },
       {
+        // How well AI tasks are done (ADR 025), scored over fixed cases: `npm run eval:ai`.
+        // Not in `npm test`: with EVAL_ENGINE=cloud it asks a real model.
+        resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
+        test: { name: "evals", environment: "node", include: ["evals/**/*.eval.ts"] },
+      },
+      {
         // Every story is a test, in a real Chromium: it must render, pass its play
         // function's checks, and have no accessibility violations.
         plugins: [storybookTest({ configDir: path.join(import.meta.dirname, ".storybook") })],

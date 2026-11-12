@@ -43,6 +43,8 @@ jobs:
       - run: npm run typecheck
       - name: Unit tests, with coverage floors
         run: npm run test:coverage
+      - name: Searches in your own words read well enough by the rules alone (ADR 025)
+        run: npm run eval:ai
       - uses: ./.github/actions/playwright
       - name: Every story renders, passes its play function, and has no axe violations
         run: npm run test:stories
