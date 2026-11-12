@@ -118,6 +118,12 @@ export const organiserQueries = {
       initialPageParam: undefined as string | undefined,
       getNextPageParam: (page) => page.nextPageToken ?? undefined,
     }),
+  /** Under the orders' key, so the live stream's refresh of the orders refreshes the count too. */
+  orderCount: (filters: OrderFilters) =>
+    queryOptions({
+      queryKey: [...organiserQueries.ordersAll(), "count", writeOrderSearchParams(filters).toString()],
+      queryFn: () => organiserApi.countOrders(filters),
+    }),
   orderAll: () => [...organiserQueries.all(), "order"] as const,
   order: (orderId: string) =>
     queryOptions({

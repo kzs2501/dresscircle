@@ -74,6 +74,15 @@ export const organiserApi = {
         { headers },
       ),
     ),
+  /** How many orders match, for a sentence that says so: one row asked for, and the total read. */
+  countOrders: (filters: OrderFilters) =>
+    asOrganiser((headers) =>
+      request(
+        withQuery(buildApiPath(API_ROUTES.organiserOrders, {}), writeOrderSearchParams(filters, { pageSize: 1 })),
+        orderPageDtoSchema,
+        { headers },
+      ),
+    ).then((page) => page.totalSize),
   getOrder: (orderId: string) =>
     asOrganiser((headers) =>
       request(buildApiPath(API_ROUTES.organiserOrder, { orderId }), organiserOrderDtoSchema, { headers }),
