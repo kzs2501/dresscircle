@@ -40,6 +40,7 @@ const plainProblemCodeSchema = z.enum([
   "payload_too_large",
   "payment_method_unavailable",
   "backend_restarting",
+  "ai_unavailable",
 ]);
 
 export const problemSchema = z.discriminatedUnion("code", [
@@ -213,6 +214,12 @@ export const PROBLEM_CATALOG: Record<ProblemCode, ProblemDefinition> = {
     title: "The demo’s backend is starting again",
     description:
       "The sandbox demo’s backend runs in a service worker in your browser, and the browser had stopped it. The page starts it again and sends the request once more, so you shouldn’t see this; if you do, reload the page.",
+  },
+  ai_unavailable: {
+    status: 503,
+    title: "AI isn’t available right now",
+    description:
+      "The search’s cloud AI couldn’t answer: no AI key is set up, the free tier’s quota is used up, this client asked too often, or the model didn’t answer in time or in the right shape. Nothing depends on it: the page reads the search without AI. The `Retry-After` header, when present, says when asking again could work.",
   },
   service_unavailable: {
     status: 503,
