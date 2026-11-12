@@ -105,6 +105,18 @@ describe("POST /ai/plan", () => {
     expect(response.headers.get("Retry-After")).toBe("42");
   });
 
+  it("logs why Groq refused, by its error code", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(Response.json({ error: { code: "json_validate_failed", message: "..." } }, { status: 400 })),
+      ),
+    );
+    expect((await ask({ task: "event-search", text: "music" })).status).toBe(503);
+    expect(warn).toHaveBeenCalledWith("[ai] event-search wasn't answered: GroqError 400 json_validate_failed");
+  });
+
   it.each([
     ["isn't JSON", "Sure! Here are some events"],
     ["names a city the catalogue doesn't have", { ...GOOD, city: "Atlantis" }],

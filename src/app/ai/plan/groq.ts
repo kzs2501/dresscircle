@@ -17,6 +17,8 @@ export class GroqError extends Error {
     /** Groq's HTTP status, when it answered. */
     readonly status: number | null,
     readonly retryAfterSeconds: number | null,
+    /** Groq's error code, such as `json_validate_failed` when the model's output broke the schema. */
+    readonly code: string | null = null,
   ) {
     super(message);
   }
@@ -61,10 +63,13 @@ export async function askGroq<Answer>({
   });
   if (!response.ok) {
     const retryAfterSeconds = Number(response.headers.get("retry-after"));
+    const failure = (await response.json().catch(() => null)) as { error?: { code?: unknown } } | null;
+    const code = typeof failure?.error?.code === "string" ? failure.error.code : null;
     throw new GroqError(
-      `Groq answered ${String(response.status)}.`,
+      `Groq answered ${String(response.status)}${code ? ` (${code})` : ""}.`,
       response.status,
       Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? Math.ceil(retryAfterSeconds) : null,
+      code,
     );
   }
   const body = (await response.json()) as { choices?: { message?: { content?: unknown } }[] };

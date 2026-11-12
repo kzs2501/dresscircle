@@ -47,22 +47,34 @@ const CLOUD_FLOOR = 0.8;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function filtersFor(request: string): Promise<{ filters: EventFilters; isAsked: boolean }> {
+/** Whether an engine was asked: not at all, and answered, or failed (and why). */
+type Asked = { kind: "no" } | { kind: "answered" } | { kind: "failed"; why: string };
+
+/** What the page would show: an engine's answer on top of the rules', or the rules' alone when the engine fails. */
+async function filtersFor(request: string): Promise<{ filters: EventFilters; asked: Asked }> {
   const reading = readEventQuery(request, CATALOG, today);
-  if (engine === "none" || reading.unknownWords.length === 0) return { filters: reading.filters, isAsked: false };
+  if (engine === "none" || reading.unknownWords.length === 0)
+    return { filters: reading.filters, asked: { kind: "no" } };
   const apiKey = process.env["GROQ_API_KEY"];
   if (!apiKey) throw new Error("EVAL_ENGINE=cloud needs GROQ_API_KEY.");
   const task = eventSearchTask(filterChoices(CATALOG), today);
-  const answer = task.schema.parse(
-    await askGroq({
-      apiKey,
-      model: process.env["AI_CLOUD_MODEL"] ?? DEFAULT_GROQ_MODEL,
-      task,
-      request,
-      signal: AbortSignal.timeout(15_000),
-    }),
-  );
-  return { filters: readingWithAnswer(reading, answer, CATALOG).filters, isAsked: true };
+  try {
+    const answer = task.schema.parse(
+      await askGroq({
+        apiKey,
+        model: process.env["AI_CLOUD_MODEL"] ?? DEFAULT_GROQ_MODEL,
+        task,
+        request,
+        signal: AbortSignal.timeout(15_000),
+      }),
+    );
+    return { filters: readingWithAnswer(reading, answer, CATALOG).filters, asked: { kind: "answered" } };
+  } catch (error) {
+    return {
+      filters: reading.filters,
+      asked: { kind: "failed", why: error instanceof Error ? error.message : String(error) },
+    };
+  }
 }
 
 /** Whether a field came out as expected. Keywords count when every expected word is there. */
@@ -86,7 +98,7 @@ describe(`reading searches in your own words, engine: ${engine}`, () => {
       };
       let exact = 0;
       for (const { request, expect: expected } of cases) {
-        const { filters, isAsked } = await filtersFor(request);
+        const { filters, asked } = await filtersFor(request);
         const misses = FIELDS.filter((field) => {
           const want = expected[field];
           if (want === undefined) return false;
@@ -96,10 +108,10 @@ describe(`reading searches in your own words, engine: ${engine}`, () => {
           return !isHit;
         });
         if (misses.length === 0) exact += 1;
-        rows.push(
-          `${misses.length === 0 ? "✓" : "✗"} ${isAsked ? "[ai]" : "    "} ${request}  →  ${JSON.stringify(filters)}`,
-        );
-        if (isAsked) await sleep(CLOUD_SPACING_MS);
+        const tag = { no: "    ", answered: "[ai]", failed: "[ai failed]" }[asked.kind];
+        const why = asked.kind === "failed" ? `  (${asked.why})` : "";
+        rows.push(`${misses.length === 0 ? "✓" : "✗"} ${tag} ${request}  →  ${JSON.stringify(filters)}${why}`);
+        if (asked.kind !== "no") await sleep(CLOUD_SPACING_MS);
       }
       const score = exact / cases.length;
       const perField = FIELDS.map(

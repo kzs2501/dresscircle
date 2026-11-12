@@ -62,7 +62,7 @@ function problem(
 /** Why a request failed, for the log: never the request's text, nor anything the model wrote. */
 const describeFailure = (error: unknown) =>
   error instanceof GroqError
-    ? `${error.name} ${String(error.status ?? "")}`.trim()
+    ? [error.name, error.status, error.code].filter((part) => part !== null).join(" ")
     : error instanceof Error
       ? error.name
       : "unknown";
