@@ -7,18 +7,16 @@
  * catalogue and its own clock, so a caller can send nothing but the text, and gets back
  * nothing but an answer that passed the task's schema. Each client may ask 10 times a
  * minute and 60 an hour, counted in this instance's memory; Groq's daily quota is the
- * real ceiling. Whatever goes wrong is one problem, `ai_unavailable`, and the page reads
- * the search without AI.
+ * real ceiling. Whatever goes wrong is one problem, `ai_unavailable`, and the page
+ * answers without AI.
  */
-import { CATALOG } from "@/core/catalog";
 import { clientIpHeaderFrom, clientKeyOf } from "@/core/client-key";
 import { createSlidingWindowStore, type RateLimit } from "@/core/sliding-window";
 import * as z from "@/core/zod";
 import { PROBLEM_CATALOG, PROBLEM_CONTENT_TYPE, problemTypeFor, type ProblemCode } from "@/contract/problems";
-import { filterChoices } from "@/features/events/domain/event-filters";
-import { AI_TASKS } from "@/lib/ai/engine";
-import { eventSearchTask, MAX_SEARCH_REQUEST_LENGTH, searchToday } from "@/lib/ai/tasks/event-search";
+import { AI_TASKS, MAX_AI_REQUEST_LENGTH } from "@/lib/ai/engine";
 import { askGroq, DEFAULT_GROQ_MODEL, GroqError } from "./groq";
+import { buildTask } from "./tasks";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +34,7 @@ const perHour = createSlidingWindowStore(Date.now);
 
 const bodySchema = z.strictObject({
   task: z.enum(AI_TASKS),
-  text: z.string().trim().min(1).max(MAX_SEARCH_REQUEST_LENGTH),
+  text: z.string().trim().min(1).max(MAX_AI_REQUEST_LENGTH),
 });
 
 function problem(
@@ -105,7 +103,7 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  const task = eventSearchTask(filterChoices(CATALOG), searchToday(Date.now()));
+  const task = buildTask(parsed.data.task, Date.now());
   try {
     const answer = task.schema.parse(
       await askGroq({

@@ -5,7 +5,15 @@
  * back an answer that has passed the schema, or throws. What the answer means, and what
  * it does, is the caller's code, never the model's.
  */
+import { zonedDate } from "@/core/time";
 import type * as z from "@/core/zod";
+
+/** The longest request an engine is asked about: a question, not a document. */
+export const MAX_AI_REQUEST_LENGTH = 200;
+
+/** Every venue and organisation is in India, so "today", "this week" and "next month" are India's. */
+export const AI_TIME_ZONE = "Asia/Kolkata";
+export const todayInIndia = (nowMs: number) => zonedDate(nowMs, AI_TIME_ZONE);
 
 /** The tasks the cloud route knows. It builds each from its name, so a caller can't send a prompt of its own. */
 export const AI_TASKS = ["event-search"] as const;

@@ -9,15 +9,10 @@
  */
 import * as z from "@/core/zod";
 import type { EventCategory } from "@/core/statuses";
-import { zonedDate } from "@/core/time";
-import type { AiTask } from "../engine";
+import { todayInIndia, type AiTask } from "../engine";
 
-/** The longest request an engine is asked about. */
-export const MAX_SEARCH_REQUEST_LENGTH = 200;
-
-/** Every venue is in India, so "today" and "next month" are India's. */
-export const SEARCH_TIME_ZONE = "Asia/Kolkata";
-export const searchToday = (nowMs: number) => zonedDate(nowMs, SEARCH_TIME_ZONE);
+/** Today where the events are, for "next month" and a month without a year. */
+export const searchToday = todayInIndia;
 
 export interface EventSearchChoices {
   categories: readonly EventCategory[];
