@@ -13,7 +13,7 @@ Strict TypeScript (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, …
 
 ## `npm run eval:ai`
 
-32 searches written in your own words, each with the filters a person would expect, scored field by field through the page's own pipeline ([ADR 025](decisions/025-the-ai-fills-in-a-form.md)). CI runs them through the rules alone, which read 28 exactly right (88%), and fails below 80%. With `EVAL_ENGINE=cloud` and a Groq key, the words the rules can't place go to the free tier's model too, by hand: on 13 November 2026, `openai/gpt-oss-20b` was asked about 14 of the 32 and the pipeline read 30 exactly right (94%). Its one failure was the request that tries to give it instructions: Groq refused the output (`json_validate_failed`), and the rules' reading stood.
+33 searches written in your own words, each with the filters a person would expect, scored field by field through the page's own pipeline ([ADR 025](decisions/025-the-ai-fills-in-a-form.md)). CI runs them through the rules alone, which read 28 exactly right (85%), and fails below 80%. With `EVAL_ENGINE=cloud` and a Groq key, the words the rules can't place go to the free tier's model too, by hand: on 13 November 2026, `openai/gpt-oss-20b` read 32 of 33 exactly right (97%). Its one miss was the request that tries to give it instructions: Groq refused the output (`json_validate_failed`), and the rules' reading stood. That run also caught the model setting a month nobody asked for ("a night of live jazz in Goa"), which its instructions now rule out, and which is a case of its own.
 
 ## `npm run test:server`
 

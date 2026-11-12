@@ -34,7 +34,7 @@ uses, so the worst a wrong answer can do is choose a filter the person sees and 
 names, the catalogue's cities and their old names, months with or without a year, and the
 things a request often asks for that aren't filters (a price, a number of tickets, a
 day), which are reported rather than dropped. Only words the rules can't place go to an
-engine. The rules alone read 28 of the 32 eval cases exactly right; the four they miss
+engine. The rules alone read 28 of the 33 eval cases exactly right; the five they miss
 need an engine.
 
 **Engines are tried in order, and each is free:**
@@ -72,7 +72,7 @@ couldn't use.
 - **The rate limit is in each server instance's memory,** so instances count separately.
   That's acceptable because the real ceiling is Groq's daily quota, and running into it
   costs nothing: visitors get the rules' reading until it resets.
-- **Quality is measured, not assumed:** `npm run eval:ai` scores 32 requests field by
+- **Quality is measured, not assumed:** `npm run eval:ai` scores 33 requests field by
   field. CI runs the rules alone and requires 80%; `EVAL_ENGINE=cloud` asks the model too,
   by hand.
 - **Not done:** the real on-device model can't run in Playwright's Chromium, so that

@@ -239,7 +239,7 @@ read it.
   to an open model on Groq's free tier, and when neither answers, the rules' reading stands.
 - **Not a free chatbot:** `/ai/plan` builds its task on the server and takes only the
   request's text, rate-limited per client.
-- **Measured:** 32 requests scored field by field (`npm run eval:ai`); CI holds the rules
+- **Measured:** 33 requests scored field by field (`npm run eval:ai`); CI holds the rules
   alone to 80%.
 
 ([decision](decisions/025-the-ai-fills-in-a-form.md))

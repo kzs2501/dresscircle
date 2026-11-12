@@ -23,6 +23,7 @@
     },
     { "request": "comedy next month", "expect": { "category": "comedy", "month": null } },
     { "request": "a night of live jazz", "expect": { "category": "music", "q": "jazz" } },
+    { "request": "a night of live jazz in Goa", "expect": { "category": "music", "city": "Goa", "month": null } },
     { "request": "something to make me laugh in Delhi", "expect": { "category": "comedy", "city": "Delhi" } },
     { "request": "learn to make pots", "expect": { "category": "workshops" } },
     { "request": "a play about trains in Mumbai", "expect": { "category": "theatre", "city": "Mumbai" } },
