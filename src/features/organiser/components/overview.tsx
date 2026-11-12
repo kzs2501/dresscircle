@@ -9,6 +9,7 @@ import { routes } from "@/lib/routes";
 import { Notice } from "@/components/ui/notice";
 import { Spinner } from "@/components/ui/spinner";
 import { pollIntervalFor, useLiveUpdates } from "@/features/organiser/hooks/use-live-updates";
+import { Assistant } from "./assistant";
 import { SalesChart } from "./sales-chart";
 
 function Kpis({ metrics }: { metrics: SalesMetricsDto }) {
@@ -167,6 +168,7 @@ export function Overview() {
           </select>
         </label>
       </div>
+      {events.data && <Assistant events={events.data} shownEvent={eventSlug ?? null} />}
       {shouldShowQueryError(metrics.data, metrics.error) ? (
         <Notice tone="bad" title="Couldn’t load the numbers" role="alert">
           Check your connection, then{" "}

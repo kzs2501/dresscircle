@@ -39,6 +39,29 @@ export const OverviewOfAllEvents: Story = {
   },
 };
 
+/**
+ * Asking about sales (ADR 026): a suggestion answered from the sandbox's own orders,
+ * and a question typed in, read by rules with no engine, answered with the chart.
+ */
+export const AskingAboutSales: Story = {
+  args: { children: <Overview /> },
+  play: async ({ canvasElement, userEvent }) => {
+    await untilLive(canvasElement);
+    const canvas = within(canvasElement);
+    const panel = within(await canvas.findByRole("region", { name: "Ask about your sales" }));
+    await userEvent.click(panel.getByRole("button", { name: "Refunded orders" }));
+    const answers = within(await panel.findByRole("list", { name: "Your questions, newest first" }));
+    await expect(await answers.findByText(/^[\d,]+ refunded orders?\.$/u)).toBeVisible();
+    await expect(answers.getByRole("link", { name: /in the orders table$/u })).toHaveAttribute(
+      "href",
+      "/organiser/orders?status=refunded",
+    );
+    await userEvent.type(panel.getByRole("textbox", { name: "Your question" }), "how buyers paid{Enter}");
+    await expect(await answers.findByText(/^Of [\d,]+ paid orders, /u)).toBeVisible();
+    await expect(answers.getAllByText("Without AI")).toHaveLength(2);
+  },
+};
+
 /** One event, with the chart's numbers opened as a table: every chart's data is one click away. */
 export const OverviewOfOneEvent: Story = {
   args: { children: <Overview /> },

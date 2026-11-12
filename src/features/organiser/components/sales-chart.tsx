@@ -10,7 +10,15 @@ const PLOT = { width: 640, height: 180 };
  * who can't see it (W3C WAI, "Complex images"), and the full numbers are a table one
  * click away. The colour isn't the only signal: the line and its gridlines carry it too.
  */
-export function SalesChart({ metrics }: { metrics: SalesMetricsDto }) {
+export function SalesChart({
+  metrics,
+  headingLevel = 2,
+}: {
+  metrics: SalesMetricsDto;
+  /** 3 when the chart answers a question inside another section. */
+  headingLevel?: 2 | 3;
+}) {
+  const Heading = headingLevel === 3 ? "h3" : "h2";
   const summaryId = useId();
   const days = metrics.salesByDay;
   const { total, busiest } = summarise(days, (day) => day.tickets);
@@ -30,7 +38,7 @@ export function SalesChart({ metrics }: { metrics: SalesMetricsDto }) {
   return (
     <figure className="rounded-xl border border-line bg-card p-5">
       <figcaption>
-        <h2 className="font-display text-lg font-semibold">Tickets sold by day</h2>
+        <Heading className="font-display text-lg font-semibold">Tickets sold by day</Heading>
         <p id={summaryId} className="mt-1 text-sm text-ink-2">
           {summary}
         </p>

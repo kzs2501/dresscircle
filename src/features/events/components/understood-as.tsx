@@ -1,15 +1,9 @@
 import { CATEGORY_LABELS } from "@/core/statuses";
 import { formatMonth } from "@/lib/format";
-import type { EngineName } from "@/lib/ai/engine";
+import { EngineBadge } from "@/components/ui/engine-badge";
 import type { EventFilters } from "@/features/events/domain/event-filters";
 import type { QueryNote } from "@/features/events/domain/event-query";
 import type { Interpretation } from "@/features/events/hooks/use-event-interpreter";
-
-const ENGINE_LABELS: Record<EngineName | "none", string> = {
-  "on-device": "On-device AI",
-  cloud: "AI (free tier)",
-  none: "Without AI",
-};
 
 /** The filters a request was read as, in the words the filters use. */
 function understood({ category, city, month, q }: EventFilters): string[] {
@@ -64,9 +58,7 @@ function Reading({ filters, notes, engine }: Extract<Interpretation, { status: "
         <span>
           {parts.length > 0 ? <>Understood as {parts.join(" · ")}.</> : <>Couldn’t turn that into filters.</>}
         </span>
-        <span className="rounded-full border border-line px-2 py-0.5 text-xs text-ink-3">
-          {ENGINE_LABELS[engine ?? "none"]}
-        </span>
+        <EngineBadge engine={engine} />
       </p>
       {notes.length > 0 && (
         <ul className="text-ink-3">
