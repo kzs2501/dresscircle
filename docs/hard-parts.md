@@ -243,3 +243,21 @@ read it.
   alone to 80%.
 
 ([decision](decisions/025-the-ai-fills-in-a-form.md))
+
+## 18. An assistant that never sees the data
+
+On the organisers' overview, ask "refunded UPI orders last week" or "which ticket type is
+selling best?", or click a suggestion: the answer is a sentence, a picture where one helps,
+and a link to where its numbers came from.
+
+- **The model never sees the data:** it fills in a query (what kind of answer, which event,
+  period, statuses, method or buyer), and the page answers it from the organisers' API, as
+  the dashboard does. Only the question and the public list of events leave the browser.
+- **Rules first, and exact:** they read most questions with no network, and where they
+  found a period, status, method or buyer, an engine's reading keeps theirs.
+- **Only your events:** an engine in the browser is offered only the account's own, and the
+  API checks access as always.
+- **Live and honest:** answers update with the dashboard, and say what they can't split
+  (sales by ticket type, by date).
+
+([decision](decisions/026-an-assistant-that-never-sees-the-data.md))
