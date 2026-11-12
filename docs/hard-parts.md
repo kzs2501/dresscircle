@@ -224,3 +224,22 @@ to each hard part, and every event with a poster drawn in SVG.
   query per five seconds however many pages poll.
 
 ([decision](decisions/023-a-box-office-first.md))
+
+## 17. Search in your own words, for free
+
+Type "stand-up in Delhi in February" or "something mellow by the sea" and press Enter: the
+filters are set, and a line under them says what the request was read as and which engine
+read it.
+
+- **The AI fills in a form:** a kind of event, a city, a month, words to search for and
+  what isn't a filter, each chosen from the catalogue's own lists. The page's code checks
+  and applies it, so the model can't invent an event or a number.
+- **Rules first, then free engines in order:** the rules read most requests with no
+  network; words they can't place go to Chrome's built-in model when it's installed, then
+  to an open model on Groq's free tier, and when neither answers, the rules' reading stands.
+- **Not a free chatbot:** `/ai/plan` builds its task on the server and takes only the
+  request's text, rate-limited per client.
+- **Measured:** 32 requests scored field by field (`npm run eval:ai`); CI holds the rules
+  alone to 80%.
+
+([decision](decisions/025-the-ai-fills-in-a-form.md))

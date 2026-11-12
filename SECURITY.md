@@ -77,6 +77,12 @@ mode, `/api/*` is a real server on Postgres, and everything below applies.
   That's the honest limit of a backend in the browser; a server signs with its own key.
 - **Without a trusted proxy,** the server can't tell clients apart and doesn't rate-limit
   reserving; it says so when it starts.
+- **AI search's rate limit is per server instance** (`/ai/plan`, [ADR 025](docs/decisions/025-the-ai-fills-in-a-form.md)):
+  instances count separately, and the real ceiling is the free tier's daily quota.
+  Draining it costs nothing; visitors get the search read by rules until it resets. The
+  route can't be used as a model of one's own: it builds its task on the server, takes
+  only a request's text, and answers only with choices from the catalogue's lists, so a
+  request with instructions in it can't do anything.
 
 ## Dependencies
 

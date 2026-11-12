@@ -163,6 +163,16 @@ describe("an AI engine's answer on top of the rules' reading", () => {
     });
   });
 
+  it("lets a month with events replace the rules' empty one, and never says a month is empty twice", () => {
+    expect(merged("comedy next month", { month: "2027-02" })).toMatchObject({
+      filters: { category: "comedy", month: "2027-02" },
+      notes: [],
+    });
+    expect(merged("comedy next month", { month: "2026-12" }).notes).toEqual([
+      { kind: "month-empty", month: "2026-12", nextMonth: "2027-02" },
+    ]);
+  });
+
   it("doesn't say twice what the rules already reported", () => {
     expect(
       merged("cheap comedy for 4 tonight, something chill", {

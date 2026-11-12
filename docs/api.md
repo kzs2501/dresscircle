@@ -223,6 +223,21 @@ voided, not deleted: each is a signed token that a door checks offline, so a doo
 learns of a refund from the event's list of voided codes (`…/door`), which it fetches
 while online ([ADR 019](decisions/019-offline-tickets-and-door-scanner.md)).
 
+## AI search
+
+`POST /ai/plan` reads a search written in your own words into the home page's filters
+([decision](decisions/025-the-ai-fills-in-a-form.md)). It's outside `/api/*`, so it's the
+same in both builds, and it isn't part of the sandbox's backend.
+
+- **Request:** `{ "task": "event-search", "text": "something mellow by the sea" }`, at
+  most 200 characters of text. Anything else is a `422 invalid_request`.
+- **Answer:** `{ "answer": { "category", "city", "month", "keywords", "notApplied" } }`,
+  with the category and city from the catalogue's own lists, or null.
+- **When it can't:** `503 ai_unavailable` with `Retry-After`: no key set up, a client
+  asking more than 10 times a minute or 60 an hour, the free tier's quota spent, or an
+  answer that was slow or didn't pass the schema. The page then reads the search by rules
+  alone.
+
 ## Webhooks, in server mode
 
 `POST /api/webhooks/payments` is where the payment provider tells the server what
