@@ -100,7 +100,7 @@ const STOPWORDS = new Set(
     "a an the in at on near around by for of to from me my i im we us our you want wanna would like looking look " +
     "find search show shows event events something anything some any please with and or is are there whats what " +
     "happening going get tickets ticket book booking see watch attend good nice best great night nights evening " +
-    "out go can could where when which this that it its be"
+    "out go can could where when which this that it its be about"
   ).split(" "),
 );
 
@@ -289,7 +289,8 @@ export function readingWithAnswer(
   const answered = normalised(answer.keywords ?? "")
     .split(/[^\p{L}\p{N}]+/u)
     .filter((word) => word.length > 1 && !STOPWORDS.has(word));
-  const keywords = [...new Set([...(filters.q?.split(" ") ?? []), ...answered.filter(mentions)])];
+  // The engine read the whole request, so its words replace the rules' word-by-word guesses.
+  const keywords = [...new Set(answered.filter(mentions))];
   if (keywords.length > 0) filters.q = keywords.join(" ");
   else delete filters.q;
 
