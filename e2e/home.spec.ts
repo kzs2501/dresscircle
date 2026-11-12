@@ -49,6 +49,95 @@ test.describe("search and filters", () => {
   });
 });
 
+test.describe("a search in your own words (ADR 025)", () => {
+  const searchBox = (page: Page) => page.getByRole("searchbox", { name: "Search events, venues and cities" });
+  const aiAnswer = (answer: Record<string, unknown>) => ({
+    category: null,
+    city: null,
+    month: null,
+    keywords: null,
+    notApplied: [],
+    ...answer,
+  });
+
+  test(
+    "is read by rules alone when they can place every word, and Back undoes it",
+    { tag: "@both" },
+    async ({ page }) => {
+      const asked: string[] = [];
+      page.on("request", (request) => {
+        if (new URL(request.url()).pathname === "/ai/plan") asked.push(request.url());
+      });
+      await page.goto("/");
+      await searchBox(page).fill("stand-up in Delhi");
+      await searchBox(page).press("Enter");
+
+      await expect(page).toHaveURL(/\?cat=comedy&city=Delhi$/);
+      await expect(page.getByText("Understood as Comedy · Delhi.")).toBeVisible();
+      await expect(page.getByText("Without AI")).toBeVisible();
+      await expect(results(page).getByRole("link", { name: /The Late Show, Hauz Khas/ })).toBeVisible();
+      await expect(searchBox(page)).toHaveValue("");
+      expect(asked).toEqual([]);
+
+      await page.goBack();
+      await expect(page).toHaveURL(/\?q=stand-up\+in\+Delhi$/);
+      await expect(page.getByText("Understood as Comedy · Delhi.")).toBeHidden();
+    },
+  );
+
+  test(
+    "hands only the words rules can't place to an AI engine, which fills the same filters",
+    { tag: "@both" },
+    async ({ page }) => {
+      const sent: unknown[] = [];
+      await page.route("**/ai/plan", async (route) => {
+        sent.push(route.request().postDataJSON());
+        await route.fulfill({ json: { answer: aiAnswer({ category: "music", city: "Goa", notApplied: ["mellow"] }) } });
+      });
+      await page.goto("/");
+      await searchBox(page).fill("something mellow by the sea");
+      await searchBox(page).press("Enter");
+
+      await expect(page).toHaveURL(/\?cat=music&city=Goa$/);
+      await expect(page.getByText("Understood as Music · Goa.")).toBeVisible();
+      await expect(page.getByText("AI (free tier)")).toBeVisible();
+      await expect(page.getByText("Not a filter: “mellow”.")).toBeVisible();
+      await expect(results(page).getByRole("link", { name: /Night Market Jazz/ })).toBeVisible();
+      expect(sent).toEqual([{ task: "event-search", text: "something mellow by the sea" }]);
+    },
+  );
+
+  test(
+    "keeps the rules' reading when no engine can answer, and says what it didn't use",
+    { tag: "@both" },
+    async ({ page }) => {
+      await page.route("**/ai/plan", (route) =>
+        route.fulfill({ status: 503, headers: { "Retry-After": "60" }, json: { code: "ai_unavailable" } }),
+      );
+      await page.goto("/");
+      await searchBox(page).fill("jazz somewhere mellow");
+      await searchBox(page).press("Enter");
+
+      await expect(page).toHaveURL(/\?q=jazz$/);
+      await expect(page.getByText("Understood as “jazz”.")).toBeVisible();
+      await expect(page.getByText("Without AI")).toBeVisible();
+      await expect(page.getByText("Didn’t use “somewhere”, “mellow”.")).toBeVisible();
+    },
+  );
+
+  test("says what isn't a filter yet instead of dropping it", { tag: "@both" }, async ({ page }) => {
+    // "Next month" is December 2026, which has no events, on any day this test runs.
+    await page.clock.setFixedTime(new Date("2026-11-12T12:00:00+05:30"));
+    await page.goto("/");
+    await searchBox(page).fill("cheap comedy next month");
+    await searchBox(page).press("Enter");
+
+    await expect(page).toHaveURL(/\?cat=comedy$/);
+    await expect(page.getByText("Price isn’t a filter yet.")).toBeVisible();
+    await expect(page.getByText(/^No events in December 2026\. The next ones are in February 2027\.$/)).toBeVisible();
+  });
+});
+
 test.describe("the live strip", () => {
   test(
     "is quiet with nothing happening, and shows a purchase once it's paid",

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { CATALOG } from "@/core/catalog";
-import { MAX_REQUEST_LENGTH, nextMonthWithEvents, readEventQuery } from "./event-query";
+import { MAX_REQUEST_LENGTH, nextMonthWithEvents, readEventQuery, readingWithAnswer } from "./event-query";
 
 /** A fixed day, so "next month" and a month without a year always mean the same. */
 const TODAY = "2026-11-12";
@@ -112,5 +112,63 @@ describe("reading a search written in your own words", () => {
     expect(nextMonthWithEvents(["2027-02", "2027-03"], "2026-12")).toBe("2027-02");
     expect(nextMonthWithEvents(["2027-02", "2027-03"], "2027-02")).toBe("2027-03");
     expect(nextMonthWithEvents(["2027-02"], "2027-05")).toBeNull();
+  });
+});
+
+describe("an AI engine's answer on top of the rules' reading", () => {
+  const answer = (fields: Partial<Parameters<typeof readingWithAnswer>[1]>) => ({
+    category: null,
+    city: null,
+    month: null,
+    keywords: null,
+    notApplied: [],
+    ...fields,
+  });
+  const merged = (text: string, fields: Partial<Parameters<typeof readingWithAnswer>[1]>) =>
+    readingWithAnswer(read(text), answer(fields), CATALOG);
+
+  it("adds what the engine understood to what the rules read", () => {
+    expect(merged("something mellow by the sea", { category: "music", city: "Goa", notApplied: ["mellow"] })).toEqual({
+      filters: { category: "music", city: "Goa" },
+      notes: [{ kind: "not-applied", text: "mellow" }],
+      unknownWords: [],
+    });
+  });
+
+  it("uses an engine's words only when an event mentions them, and says which it didn't use", () => {
+    expect(merged("ceramics vibes", { keywords: "ceramics pottery" })).toEqual({
+      filters: { q: "ceramics" },
+      notes: [{ kind: "unused", words: ["pottery"] }],
+      unknownWords: [],
+    });
+  });
+
+  it("can't choose what the catalogue doesn't have", () => {
+    expect(merged("opera in Atlantis", { category: "comedy", city: "Atlantis" }).filters).toEqual({
+      category: "comedy",
+    });
+  });
+
+  it("takes a month with events, and says when one has none", () => {
+    expect(merged("something in feb", { month: "2027-02" }).filters).toMatchObject({ month: "2027-02" });
+    expect(merged("winter fun", { month: "2026-12" }).notes).toContainEqual({
+      kind: "month-empty",
+      month: "2026-12",
+      nextMonth: "2027-02",
+    });
+  });
+
+  it("doesn't say twice what the rules already reported", () => {
+    expect(
+      merged("cheap comedy for 4 tonight, something chill", {
+        category: "comedy",
+        notApplied: ["cheap", "for 4", "tonight", "chill"],
+      }).notes,
+    ).toEqual([
+      { kind: "price" },
+      { kind: "ticket-count" },
+      { kind: "day", phrase: "tonight" },
+      { kind: "not-applied", text: "chill" },
+    ]);
   });
 });

@@ -14,7 +14,9 @@ import {
   MAX_EVENT_SEARCH_LENGTH,
   type EventFilters,
 } from "@/features/events/domain/event-filters";
+import { useEventInterpreter, type Interpretation } from "@/features/events/hooks/use-event-interpreter";
 import { EventGrid, type EventCardData } from "./event-card";
+import { UnderstoodAs } from "./understood-as";
 
 type Change = (next: EventFilters, how: "push" | "replace") => void;
 
@@ -31,7 +33,9 @@ export function DiscoveryView({
   events,
   filters,
   query,
+  interpretation = IDLE,
   onQuery,
+  onRequest,
   onChange,
   children,
 }: {
@@ -39,7 +43,11 @@ export function DiscoveryView({
   filters: EventFilters;
   /** What's typed in the search box, which may run ahead of the URL. */
   query: string;
+  /** What a search written in your own words was read as, once Enter is pressed. */
+  interpretation?: Interpretation;
   onQuery: (query: string) => void;
+  /** Enter: read what's typed as a request, in the person's own words. */
+  onRequest: (request: string) => void;
   onChange: Change;
   /** What the page shows when nothing is being searched for. */
   children: ReactNode;
@@ -54,7 +62,11 @@ export function DiscoveryView({
         role="search"
         aria-label="Find an event"
         className="mt-8 space-y-4"
-        onSubmit={(event) => event.preventDefault()}
+        aria-busy={interpretation.status === "reading"}
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (query.trim()) onRequest(query);
+        }}
       >
         <label htmlFor="event-search" className="sr-only">
           Search events, venues and cities
@@ -66,11 +78,15 @@ export function DiscoveryView({
           maxLength={MAX_EVENT_SEARCH_LENGTH}
           placeholder="Search events, venues, cities"
           autoComplete="off"
+          aria-describedby="event-search-hint"
           onChange={(event) => {
             onQuery(event.target.value);
           }}
           className="w-full rounded-lg border border-line bg-card px-4 py-3 text-base placeholder:text-ink-3"
         />
+        <p id="event-search-hint" className="-mt-2 text-sm text-ink-3">
+          Press Enter to search in your own words, like “comedy in Delhi in February”.
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <div role="group" aria-label="Kind of event" className="flex flex-wrap gap-2">
             {categories.map((category) => (
@@ -124,6 +140,7 @@ export function DiscoveryView({
             ))}
           </select>
         </div>
+        <UnderstoodAs interpretation={interpretation} />
       </form>
 
       {results ? (
@@ -162,6 +179,7 @@ export function DiscoveryView({
 }
 
 const ignore = () => undefined;
+const IDLE: Interpretation = { status: "idle" };
 
 /**
  * What the server renders while the URL's filters are only known in the browser: the
@@ -169,7 +187,7 @@ const ignore = () => undefined;
  */
 export function DiscoveryFallback({ events, children }: { events: readonly EventCardData[]; children: ReactNode }) {
   return (
-    <DiscoveryView events={events} filters={{}} query="" onQuery={ignore} onChange={ignore}>
+    <DiscoveryView events={events} filters={{}} query="" onQuery={ignore} onRequest={ignore} onChange={ignore}>
       {children}
     </DiscoveryView>
   );
@@ -183,6 +201,7 @@ export function DiscoveryFallback({ events, children }: { events: readonly Event
 export function Discovery({ events, children }: { events: readonly EventCardData[]; children: ReactNode }) {
   const router = useRouter();
   const filters = eventFiltersFrom(new URLSearchParams(useSearchParams()), events);
+  const { interpretation, interpret, clear } = useEventInterpreter(events);
   const urlQuery = filters.q ?? "";
   const [query, setQuery] = useState(urlQuery);
   const [seenUrlQuery, setSeenUrlQuery] = useState(urlQuery);
@@ -197,16 +216,33 @@ export function Discovery({ events, children }: { events: readonly EventCardData
     else router.replace(href, { scroll: false });
   };
 
+  // Said back only while it's still true: a filter changed by hand, or Back, makes it stale.
+  const isCurrent =
+    interpretation.status !== "done" ||
+    eventFilterParams(interpretation.filters).toString() === eventFilterParams(filters).toString();
+
   return (
     <DiscoveryView
       events={events}
       filters={filters}
       query={query}
+      interpretation={isCurrent ? interpretation : IDLE}
       onQuery={(next) => {
+        clear();
         setQuery(next);
         change({ ...filters, q: next.trim() || undefined }, "replace");
       }}
-      onChange={change}
+      onRequest={(request) => {
+        void interpret(request).then((next) => {
+          if (!next) return;
+          setQuery(next.q ?? "");
+          change(next, "push");
+        });
+      }}
+      onChange={(next, how) => {
+        clear();
+        change(next, how);
+      }}
     >
       {children}
     </DiscoveryView>

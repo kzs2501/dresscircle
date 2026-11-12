@@ -145,6 +145,26 @@ function singular(word: string, dictionary: Readonly<Record<string, unknown>>) {
   return null;
 }
 
+/**
+ * Whether an event mentions a word, in its name, tagline, venue, city or kind. Whole
+ * words only: "sea" isn't in "research", though a search's substring match would find it.
+ */
+function mentionedBy(events: readonly Listed[]) {
+  const vocabulary = new Set(
+    events.flatMap((event) =>
+      normalised([event.name, event.tagline, event.venue, event.city, CATEGORY_LABELS[event.category]].join(" ")).split(
+        /[^\p{L}\p{N}]+/u,
+      ),
+    ),
+  );
+  return (word: string) =>
+    [word, `${word}s`, `${word}es`, word.replace(/e?s$/u, "")].some((form) => vocabulary.has(form));
+}
+
+/** A phrase the rules already report: a price, a number of tickets or a day. */
+const isReportedPhrase = (text: string) =>
+  [PRICE, TICKET_COUNT, DAY].some((pattern) => new RegExp(pattern.source, "u").test(` ${normalised(text)} `));
+
 /** The first month after this one that has events, if any. */
 export const nextMonthWithEvents = (months: readonly string[], after: string) =>
   months.find((month) => month > after) ?? null;
@@ -184,16 +204,7 @@ export function readEventQuery(text: string, events: readonly Listed[], today: s
     }
   }
 
-  // Whole words only: "sea" isn't in "research", though a search's substring match would find it.
-  const vocabulary = new Set(
-    events.flatMap((event) =>
-      normalised([event.name, event.tagline, event.venue, event.city, CATEGORY_LABELS[event.category]].join(" ")).split(
-        /[^\p{L}\p{N}]+/u,
-      ),
-    ),
-  );
-  const mentions = (word: string) =>
-    [word, `${word}s`, `${word}es`, word.replace(/e?s$/u, "")].some((form) => vocabulary.has(form));
+  const mentions = mentionedBy(events);
 
   const words = rest.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
   for (const [index, word] of words.entries()) {
@@ -237,4 +248,56 @@ export function readEventQuery(text: string, events: readonly Listed[], today: s
   if (keywords.length > 0) filters.q = keywords.join(" ");
 
   return { filters, notes, unknownWords };
+}
+
+/** What an AI engine filled in, as `EventSearchAnswer` has it. */
+export interface EngineAnswer {
+  category: EventCategory | null;
+  city: string | null;
+  month: string | null;
+  keywords: string | null;
+  notApplied: readonly string[];
+}
+
+/**
+ * The rules' reading with an engine's answer on top. The answer can only choose among
+ * the catalogue's filters, and its words only count when an event mentions them; the
+ * rules' notes stay, and what the engine couldn't use is said once, not twice.
+ */
+export function readingWithAnswer(
+  reading: QueryReading,
+  answer: EngineAnswer,
+  events: readonly Listed[],
+): QueryReading {
+  const choices = filterChoices(events);
+  const mentions = mentionedBy(events);
+  const filters: EventFilters = { ...reading.filters };
+  let notes: QueryNote[] = reading.notes.filter((note) => note.kind !== "unused");
+
+  if (answer.category && choices.categories.includes(answer.category)) filters.category = answer.category;
+  if (answer.city && choices.cities.includes(answer.city)) filters.city = answer.city;
+  if (answer.month) {
+    const asked = answer.month;
+    if (choices.months.includes(asked)) {
+      filters.month = asked;
+      notes = notes.filter((note) => note.kind !== "month-empty");
+    } else if (!notes.some((note) => note.kind === "month-empty")) {
+      notes.push({ kind: "month-empty", month: asked, nextMonth: nextMonthWithEvents(choices.months, asked) });
+    }
+  }
+
+  const answered = normalised(answer.keywords ?? "")
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word.length > 1 && !STOPWORDS.has(word));
+  const keywords = [...new Set([...(filters.q?.split(" ") ?? []), ...answered.filter(mentions)])];
+  if (keywords.length > 0) filters.q = keywords.join(" ");
+  else delete filters.q;
+
+  for (const text of answer.notApplied) {
+    if (!isReportedPhrase(text)) notes.push({ kind: "not-applied", text });
+  }
+  const unused = answered.filter((word) => !mentions(word));
+  if (unused.length > 0) notes.push({ kind: "unused", words: unused });
+
+  return { filters, notes, unknownWords: [] };
 }
