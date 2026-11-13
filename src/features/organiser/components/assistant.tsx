@@ -26,6 +26,7 @@ const BLANK: OrganiserQuestion = {
   statuses: [],
   method: null,
   search: null,
+  refundReason: null,
   notApplied: [],
 };
 
@@ -45,6 +46,7 @@ const INTENT_LABELS: Record<QuestionIntent, string> = {
   "payment-mix": "How buyers paid",
   funnel: "From reservation to ticket",
   "find-orders": "Orders",
+  "refund-orders": "Refund orders",
   unsupported: "Not something I can answer",
 };
 const STATUS_LABELS: Record<OrderStatus, string> = {

@@ -218,7 +218,16 @@ test.describe("asking about your sales (ADR 026)", () => {
     await panel(page).getByRole("textbox", { name: "Your question" }).fill(question);
     await panel(page).getByRole("textbox", { name: "Your question" }).press("Enter");
   };
-  const blank = { event: null, from: null, to: null, statuses: [], method: null, search: null, notApplied: [] };
+  const blank = {
+    event: null,
+    from: null,
+    to: null,
+    statuses: [],
+    method: null,
+    search: null,
+    refundReason: null,
+    notApplied: [],
+  };
 
   test("a suggestion counts the refunded orders, and its link opens just those", async ({ page, organiser }) => {
     await organiser.signInAs(/Nandini Rao/);

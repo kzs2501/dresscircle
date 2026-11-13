@@ -68,6 +68,7 @@ describe("POST /ai/plan", () => {
       statuses: ["refunded"],
       method: null,
       search: null,
+      refundReason: null,
       notApplied: [],
     };
     const fetch = groqAnswers(answer);

@@ -67,6 +67,7 @@ export const questionWith = (fields: Partial<OrganiserQuestion>): OrganiserQuest
   statuses: [],
   method: null,
   search: null,
+  refundReason: null,
   notApplied: [],
   ...fields,
 });

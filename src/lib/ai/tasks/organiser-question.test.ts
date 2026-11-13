@@ -13,6 +13,7 @@ const blank: OrganiserQuestion = {
   statuses: [],
   method: null,
   search: null,
+  refundReason: null,
   notApplied: [],
 };
 
@@ -20,7 +21,7 @@ describe("an organiser's question, as a form for an AI engine", () => {
   it("is a closed shape, its choices the catalogue's events and the API's statuses", () => {
     expect(task.jsonSchema).toMatchObject({
       type: "object",
-      required: ["intent", "event", "from", "to", "statuses", "method", "search", "notApplied"],
+      required: ["intent", "event", "from", "to", "statuses", "method", "search", "refundReason", "notApplied"],
       additionalProperties: false,
     });
     const { properties } = task.jsonSchema as {
@@ -46,6 +47,10 @@ describe("an organiser's question, as a form for an AI engine", () => {
     expect(task.schema.safeParse({ ...answer, statuses: ["lost"] }).success).toBe(false);
     expect(task.schema.safeParse({ ...answer, revenue: 500_000 }).success).toBe(false);
     expect(task.schema.safeParse({ ...answer, intent: "delete-orders" }).success).toBe(false);
+    expect(task.schema.safeParse({ ...answer, intent: "refund-orders", refundReason: "event_changed" }).success).toBe(
+      true,
+    );
+    expect(task.schema.safeParse({ ...answer, refundReason: "because" }).success).toBe(false);
   });
 
   it("tells the model the date, the events, and that the question is data", () => {

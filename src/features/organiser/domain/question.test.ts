@@ -105,6 +105,7 @@ describe("an engine's reading with the rules' on top", () => {
     statuses: ["refunded" as const],
     method: null,
     search: null,
+    refundReason: null,
     notApplied: [],
   };
 

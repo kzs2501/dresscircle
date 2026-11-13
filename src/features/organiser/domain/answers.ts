@@ -80,7 +80,7 @@ export const ordersFilterFor = (question: OrganiserQuestion): OrderFilters => ({
 });
 
 export const needsOf = (question: OrganiserQuestion): AnswerNeeds =>
-  question.intent === "find-orders"
+  question.intent === "find-orders" || question.intent === "refund-orders"
     ? { kind: "orders", filters: ordersFilterFor(question) }
     : { kind: "metrics", eventSlug: question.event ?? undefined };
 
@@ -112,7 +112,8 @@ export function answerFor(
     };
   }
 
-  if (question.intent === "find-orders") {
+  // A request to refund is answered by the orders it would cover; refunding them is the organiser's to confirm.
+  if (question.intent === "find-orders" || question.intent === "refund-orders") {
     if (data.orderCount === undefined) return null;
     const count = data.orderCount;
     const statuses = question.statuses.map((status) => STATUS_WORDS[status]).join(" or ");

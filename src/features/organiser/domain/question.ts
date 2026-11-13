@@ -196,6 +196,7 @@ export function readQuestion(text: string, events: readonly QuestionEvent[], tod
       statuses,
       method,
       search,
+      refundReason: null,
       notApplied: [],
     },
     hasIntent,
