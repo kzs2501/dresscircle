@@ -124,6 +124,17 @@ export const organiserQueries = {
       queryKey: [...organiserQueries.ordersAll(), "count", writeOrderSearchParams(filters).toString()],
       queryFn: () => organiserApi.countOrders(filters),
     }),
+  /** The orders a refund batch could cover, under the orders' key: kept current by the live stream until the dialog freezes them. */
+  refundCandidates: (filters: OrderFilters, maxRows: number) =>
+    queryOptions({
+      queryKey: [
+        ...organiserQueries.ordersAll(),
+        "refund-candidates",
+        writeOrderSearchParams(filters).toString(),
+        maxRows,
+      ],
+      queryFn: () => organiserApi.listOrdersUpTo(filters, maxRows),
+    }),
   orderAll: () => [...organiserQueries.all(), "order"] as const,
   order: (orderId: string) =>
     queryOptions({

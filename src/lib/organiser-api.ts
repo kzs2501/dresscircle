@@ -5,6 +5,7 @@
  */
 import * as z from "@/core/zod";
 import type { RefundReason } from "@/core/statuses";
+import type { OrderPageDto } from "@/contract/dto";
 import {
   accountDtoSchema,
   doorListDtoSchema,
@@ -83,6 +84,20 @@ export const organiserApi = {
         { headers },
       ),
     ).then((page) => page.totalSize),
+  /**
+   * Every order a refund batch could cover, page by page, stopping past the most a batch
+   * may hold (`maxRows`): `hasMore` says there were more than were read.
+   */
+  listOrdersUpTo: async (filters: OrderFilters, maxRows: number) => {
+    const rows: OrderPageDto["orders"] = [];
+    let pageToken: string | undefined;
+    do {
+      const page = await organiserApi.listOrders(filters, pageToken);
+      rows.push(...page.orders);
+      pageToken = page.nextPageToken ?? undefined;
+    } while (pageToken !== undefined && rows.length <= maxRows);
+    return { rows, hasMore: pageToken !== undefined };
+  },
   getOrder: (orderId: string) =>
     asOrganiser((headers) =>
       request(buildApiPath(API_ROUTES.organiserOrder, { orderId }), organiserOrderDtoSchema, { headers }),

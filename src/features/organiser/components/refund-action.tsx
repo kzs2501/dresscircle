@@ -6,14 +6,8 @@ import { REFUND_REASONS, type RefundReason } from "@/core/statuses";
 import { formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
+import { REFUND_REASON_LABELS } from "@/features/organiser/domain/refund-reasons";
 import { useRefund } from "@/features/organiser/hooks/use-refund";
-
-const REASON_LABELS: Record<RefundReason, string> = {
-  requested_by_customer: "The buyer asked for it",
-  event_changed: "The event changed",
-  duplicate: "It’s a duplicate order",
-  other: "Another reason",
-};
 
 /**
  * Refund this order in full, after confirming in a native dialog (which traps focus,
@@ -111,7 +105,7 @@ export function RefundAction({ order }: { order: OrganiserOrderDto }) {
                     }}
                     className="size-4 accent-[var(--accent)]"
                   />
-                  {REASON_LABELS[value]}
+                  {REFUND_REASON_LABELS[value]}
                 </label>
               ))}
             </div>
