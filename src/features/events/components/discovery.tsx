@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CATEGORY_LABELS } from "@/core/statuses";
 import { formatMonth } from "@/lib/format";
@@ -193,10 +193,15 @@ export function DiscoveryFallback({ events, children }: { events: readonly Event
   );
 }
 
+/** How long typing rests before the URL takes it: results update at once, history doesn't churn. */
+const TYPED_URL_DELAY_MS = 150;
+
 /**
  * The search and filters, kept in the URL: a choice adds a step to history, so Back
- * undoes it, while typing replaces the current one. The box keeps its own text, so the
- * cursor never jumps, and takes the URL's again when it changes from elsewhere (Back).
+ * undoes it, while typing replaces the current one once it rests. The box keeps its own
+ * text, so the cursor never jumps, and takes the URL's again when it changes from
+ * elsewhere (Back). A choice, or Enter, cancels typing's pending write, which would
+ * otherwise land after theirs and undo them.
  */
 export function Discovery({ events, children }: { events: readonly EventCardData[]; children: ReactNode }) {
   const router = useRouter();
@@ -216,6 +221,13 @@ export function Discovery({ events, children }: { events: readonly EventCardData
     else router.replace(href, { scroll: false });
   };
 
+  const typedWrite = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelTypedWrite = () => {
+    if (typedWrite.current !== null) clearTimeout(typedWrite.current);
+    typedWrite.current = null;
+  };
+  useEffect(() => cancelTypedWrite, []);
+
   // Said back only while it's still true: a filter changed by hand, or Back, makes it stale.
   const isCurrent =
     interpretation.status !== "done" ||
@@ -230,9 +242,14 @@ export function Discovery({ events, children }: { events: readonly EventCardData
       onQuery={(next) => {
         clear();
         setQuery(next);
-        change({ ...filters, q: next.trim() || undefined }, "replace");
+        cancelTypedWrite();
+        typedWrite.current = setTimeout(() => {
+          typedWrite.current = null;
+          change({ ...filters, q: next.trim() || undefined }, "replace");
+        }, TYPED_URL_DELAY_MS);
       }}
       onRequest={(request) => {
+        cancelTypedWrite();
         void interpret(request).then((next) => {
           if (!next) return;
           setQuery(next.q ?? "");
@@ -241,6 +258,7 @@ export function Discovery({ events, children }: { events: readonly EventCardData
       }}
       onChange={(next, how) => {
         clear();
+        cancelTypedWrite();
         change(next, how);
       }}
     >
