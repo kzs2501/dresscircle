@@ -128,3 +128,67 @@ describe("an engine's reading with the rules' on top", () => {
     ).toMatchObject({ event: "frontend-systems-summit", statuses: ["failed"] });
   });
 });
+
+describe("a request to refund, told from a question about refunds", () => {
+  it.each([
+    ["refund every order for Night Market Jazz", "night-market-jazz"],
+    ["Refund all orders for Lakeside Lights from yesterday", "lakeside-lights"],
+    ["please refund the orders for the summit", "frontend-systems-summit"],
+    ["can you refund the jazz night orders, the show was cancelled", "night-market-jazz"],
+    ["issue refunds for Monsoon Strings", "monsoon-strings"],
+    ["go ahead and refund the UPI orders from last week", null],
+  ])("reads %j as a request to refund", (text, event) => {
+    expect(asked(text)).toMatchObject({ intent: "refund-orders", event, statuses: [] });
+  });
+
+  it.each([
+    "how many refunds?",
+    "refunded orders",
+    "refunds this week",
+    "who asked for a refund",
+    "show refunded UPI orders",
+  ])("reads %j as a question, not a request", (text) => {
+    expect(asked(text)).toMatchObject({ intent: "find-orders" });
+  });
+
+  it("reads the period, method and buyer of a request like any other", () => {
+    expect(asked("refund the UPI orders from last week")).toMatchObject({
+      intent: "refund-orders",
+      method: "upi",
+      from: "2026-11-02",
+      to: "2026-11-08",
+    });
+    expect(asked("refund the orders from priya@example.com")).toMatchObject({
+      intent: "refund-orders",
+      search: "priya@example.com",
+    });
+  });
+
+  it.each([
+    ["refund every order for the jazz night, the show was cancelled", "event_changed"],
+    ["refund Monsoon Strings, it's been postponed", "event_changed"],
+    ["refund the duplicate orders from priya@example.com", "duplicate"],
+    ["refund the orders from priya@example.com, she asked", "requested_by_customer"],
+    ["refund the orders from priya@example.com", null],
+  ])("reads why from %j", (text, reason) => {
+    expect(asked(text).refundReason).toBe(reason);
+  });
+
+  it("keeps a request to refund, and its reason, whatever an engine made of them", () => {
+    const engineRead = {
+      intent: "find-orders" as const,
+      event: "night-market-jazz",
+      from: null,
+      to: null,
+      statuses: [],
+      method: null,
+      search: null,
+      refundReason: null,
+      notApplied: [],
+    };
+    expect(readingWithAnswer(read("refund the jazz night orders, cancelled sadly"), engineRead)).toMatchObject({
+      intent: "refund-orders",
+      refundReason: "event_changed",
+    });
+  });
+});

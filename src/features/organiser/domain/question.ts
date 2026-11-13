@@ -5,7 +5,7 @@
  * past 30 days", "in October"), and the account's events by the words of their names.
  * Words it can't place are handed back, for an AI engine to read the whole question.
  */
-import type { OrderStatus, PaymentMethod } from "@/core/statuses";
+import type { OrderStatus, PaymentMethod, RefundReason } from "@/core/statuses";
 import type { OrganiserQuestion, QuestionEvent, QuestionIntent } from "@/lib/ai/tasks/organiser-question";
 
 export interface QuestionReading {
@@ -55,6 +55,21 @@ const MONTHS: Readonly<Record<string, number>> = {
   december: 12,
   dec: 12,
 };
+
+/**
+ * A request to refund, not a question about refunds: "refund every order for…", "please
+ * refund the orders from…", "issue refunds for…". "How many refunds?" and "refunded
+ * orders" are questions, and stay finding orders.
+ */
+const REFUND_REQUEST =
+  /^\s*(?:(?:please|pls|can you|could you|go ahead and|lets|let us|i want to|we need to)\s+)*(?:issue\s+refunds?|refund)\b(?!s\b|ed\b)|\brefund\s+(?:all|every|each|the|these|those|their|them|everyone|everybody)\b/u;
+
+/** Why, when a request to refund says. */
+const REFUND_REASON_WORDS: readonly [RegExp, RefundReason][] = [
+  [/\b(?:cancel(?:l?ed)?|cancell?ations?|postponed|called off|rescheduled|changed|moved)\b/u, "event_changed"],
+  [/\b(?:duplicates?|double(?:[\s-]booked)?|twice)\b/u, "duplicate"],
+  [/\b(?:asked|requested|requests?|wants?|wanted)\b/u, "requested_by_customer"],
+];
 
 const STATUS_WORDS: readonly [RegExp, OrderStatus[]][] = [
   [/\brefund(?:s|ed)?\b/u, ["refunded"]],
@@ -157,11 +172,23 @@ export function readQuestion(text: string, events: readonly QuestionEvent[], tod
     period(`${month}-01`, lastDayOf(month));
   }
 
-  const statuses = [...new Set(STATUS_WORDS.flatMap(([pattern, found]) => (take(pattern).length ? found : [])))];
+  // Read first, so its "refund" isn't taken for the status refunded.
+  const isRefundRequest = take(REFUND_REQUEST).length > 0;
+  const refundReason = isRefundRequest
+    ? (REFUND_REASON_WORDS.find(([pattern]) => take(pattern).length > 0)?.[1] ?? null)
+    : null;
+
+  const statuses = isRefundRequest
+    ? []
+    : [...new Set(STATUS_WORDS.flatMap(([pattern, found]) => (take(pattern).length ? found : [])))];
   const methods = METHOD_WORDS.flatMap(([pattern, method]) => (take(pattern).length ? [method] : []));
   const method = methods[0] ?? null;
 
-  let intent: QuestionIntent | null = statuses.length > 0 || search !== null ? "find-orders" : null;
+  let intent: QuestionIntent | null = isRefundRequest
+    ? "refund-orders"
+    : statuses.length > 0 || search !== null
+      ? "find-orders"
+      : null;
   for (const [kind, pattern] of INTENT_WORDS) {
     if (take(pattern).length && intent === null) intent = kind;
   }
@@ -196,7 +223,7 @@ export function readQuestion(text: string, events: readonly QuestionEvent[], tod
       statuses,
       method,
       search,
-      refundReason: null,
+      refundReason,
       notApplied: [],
     },
     hasIntent,
@@ -215,11 +242,14 @@ export function readingWithAnswer(rules: QuestionReading, engine: OrganiserQuest
   const hasPeriod = exact.from !== null || exact.to !== null;
   return {
     ...engine,
+    // A request to refund the rules read is one, whatever the engine made of it: the organiser still confirms.
+    intent: exact.intent === "refund-orders" ? "refund-orders" : engine.intent,
     event: engine.event ?? exact.event,
     from: hasPeriod ? exact.from : engine.from,
     to: hasPeriod ? exact.to : engine.to,
     statuses: exact.statuses.length > 0 ? exact.statuses : engine.statuses,
     method: exact.method ?? engine.method,
     search: exact.search ?? engine.search,
+    refundReason: exact.refundReason ?? engine.refundReason,
   };
 }
