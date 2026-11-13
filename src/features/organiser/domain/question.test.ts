@@ -151,6 +151,13 @@ describe("a request to refund, told from a question about refunds", () => {
     expect(asked(text)).toMatchObject({ intent: "find-orders" });
   });
 
+  it("places every word of a plain request, so it needs no engine", () => {
+    expect(read("refund every order for Night Market Jazz, the show was cancelled")).toMatchObject({
+      hasIntent: true,
+      unknownWords: [],
+    });
+  });
+
   it("reads the period, method and buyer of a request like any other", () => {
     expect(asked("refund the UPI orders from last week")).toMatchObject({
       intent: "refund-orders",

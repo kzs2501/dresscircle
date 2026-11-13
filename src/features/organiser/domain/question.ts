@@ -112,7 +112,8 @@ const STOPWORDS = new Set(
     "how many much what whats which who the a an of for in on at is are was were did do does we our my me us " +
     "show tell give list get got have has had there been so far any all events event tickets ticket number count " +
     "please can could you i im and or with by from to this that it its about up till until since between than " +
-    "be being been were will would should time times there here now yet still ever some just only most more"
+    "be being been were will would should time times there here now yet still ever some just only most more " +
+    "every each these those their them everyone everybody"
   ).split(" "),
 );
 

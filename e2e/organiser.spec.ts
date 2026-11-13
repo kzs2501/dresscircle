@@ -304,6 +304,118 @@ test.describe("asking about your sales (ADR 026)", () => {
   }
 });
 
+test.describe("refunds the organiser confirms (ADR 027)", () => {
+  const panel = (page: Page) => page.getByRole("region", { name: "Ask about your sales" });
+  const answers = (page: Page) => panel(page).getByRole("list", { name: "Your questions, newest first" });
+  const ask = async (page: Page, question: string) => {
+    await panel(page).getByRole("textbox", { name: "Your question" }).fill(question);
+    await panel(page).getByRole("textbox", { name: "Your question" }).press("Enter");
+  };
+  const REQUEST = "refund every order for Night Market Jazz, the show was cancelled";
+  const jazzFulfilled = getHistory().orders.filter(
+    (order) => order.eventSlug === "night-market-jazz" && order.status === "fulfilled",
+  );
+  const count = jazzFulfilled.length;
+  const total = formatMoney(
+    jazzFulfilled.reduce((sum, order) => sum + order.amounts.totalMinor, 0),
+    "INR",
+  );
+
+  test("an owner refunds a batch only once it's confirmed, each order once", async ({ page, organiser, sandbox }) => {
+    expect(count).toBeGreaterThanOrEqual(20);
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, REQUEST);
+    await expect(
+      answers(page).getByText(/^Understood as Refund orders · Night Market Jazz · The event changed\.$/u),
+    ).toBeVisible();
+    await expect(
+      answers(page).getByText(`${formatCount(count)} orders for Night Market Jazz can be refunded: ${total} in all.`),
+    ).toBeVisible();
+    expect((await sandbox.state()).refunds).toEqual({});
+
+    await answers(page).getByRole("button", { name: "Review and refund…" }).click();
+    const dialog = page.getByRole("dialog", { name: `Refund ${String(count)} orders?` });
+    await expect(dialog.getByRole("combobox", { name: "Why?" })).toHaveValue("event_changed");
+    const refund = dialog.getByRole("button", { name: `Refund ${String(count)} orders (${total})` });
+    // Not yet: until the number is typed, the button says so, and a press does nothing.
+    await expect(refund).toBeDisabled();
+    await refund.click({ force: true });
+    await expect(dialog).toBeVisible();
+    expect((await sandbox.state()).refunds).toEqual({});
+
+    await dialog.getByRole("textbox", { name: `Type ${String(count)} to confirm` }).fill(String(count));
+    await refund.click();
+    await expect(
+      answers(page).getByText(new RegExp(`^Refunds started for ${String(count)} orders\\.`, "u")),
+    ).toBeVisible();
+    const refunds = Object.values((await sandbox.state()).refunds);
+    expect(refunds).toHaveLength(count);
+    expect(new Set(refunds.map((entry) => entry.orderId)).size).toBe(count);
+    expect(refunds.every((entry) => entry.reason === "event_changed" && entry.eventSlug === "night-market-jazz")).toBe(
+      true,
+    );
+  });
+
+  test("keeping the orders changes nothing", async ({ page, organiser, sandbox }) => {
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, REQUEST);
+    await answers(page).getByRole("button", { name: "Review and refund…" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Keep them" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(answers(page).getByRole("button", { name: "Review and refund…" })).toBeFocused();
+    expect((await sandbox.state()).refunds).toEqual({});
+  });
+
+  test("the box office is told only an owner can refund", async ({ page, organiser }) => {
+    await organiser.signInAs(/Arjun Mehta/);
+    await ask(page, REQUEST);
+    await expect(answers(page).getByText(/^Your role can’t refund orders/u)).toBeVisible();
+    await expect(answers(page).getByRole("button", { name: "Review and refund…" })).toHaveCount(0);
+  });
+
+  test("when the provider refuses, each says why; a retry later starts them, none twice", async ({
+    page,
+    organiser,
+    sandbox,
+  }) => {
+    const buyer = jazzFulfilled[0]?.buyer.email ?? "";
+    const theirs = jazzFulfilled.filter((order) => order.buyer.email === buyer).length;
+    await organiser.signInAs(/Nandini Rao/);
+    await sandbox.choosePreset("Refunds fail");
+    await ask(page, `refund the orders from ${buyer}`);
+    await answers(page).getByRole("button", { name: "Review and refund…" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /^Refund \d+ orders? \(/u })
+      .click();
+    await expect(answers(page).getByText(`${String(theirs)} didn’t go through`)).toBeVisible();
+    await expect(
+      answers(page)
+        .getByText(/couldn’t start the refund/u)
+        .first(),
+    ).toBeVisible();
+    expect((await sandbox.state()).refunds).toEqual({});
+
+    await sandbox.choosePreset("Happy path");
+    await answers(page)
+      .getByRole("button", { name: `Retry the ${String(theirs)} that failed` })
+      .click();
+    await expect(answers(page).getByText(/^Refunds started for \d+ orders?\./u)).toBeVisible();
+    expect(Object.values((await sandbox.state()).refunds)).toHaveLength(theirs);
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`no axe violations in the review dialog (${scheme})`, async ({ page, organiser }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await organiser.signInAs(/Nandini Rao/);
+      await ask(page, REQUEST);
+      await answers(page).getByRole("button", { name: "Review and refund…" }).click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      expect(await axeViolations(page)).toEqual([]);
+    });
+  }
+});
+
 test.describe("accessibility", () => {
   for (const scheme of ["light", "dark"] as const) {
     test(`no axe violations on the dashboard, the table, an order and the refund dialog (${scheme})`, async ({
