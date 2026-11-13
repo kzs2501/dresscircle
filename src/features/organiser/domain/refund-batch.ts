@@ -77,12 +77,13 @@ export function describeBatch(
   question: Pick<OrganiserQuestion, "from" | "to">,
   eventName: string | undefined,
 ): { sentence: string; notes: string[] } {
-  const scope = [
-    eventName ? ` for ${eventName}` : "",
+  const period =
     question.from || question.to
-      ? `, ${formatPeriod(question.from ?? question.to ?? "", question.to ?? question.from ?? "")}`
-      : "",
-  ].join("");
+      ? formatPeriod(question.from ?? question.to ?? "", question.to ?? question.from ?? "")
+      : null;
+  const scope = `${eventName ? ` for ${eventName}` : ""}${period ? `, ${period}` : ""}`;
+  // Mid-sentence, a period is set off by commas on both sides.
+  const scopeMid = period ? `${scope},` : scope;
   const notes = [
     ...(batch.alreadyRefunding > 0
       ? [
@@ -91,7 +92,9 @@ export function describeBatch(
       : []),
     ...(batch.notAllowed > 0
       ? [
-          `${formatCount(batch.notAllowed)} of events your role can’t refund ${batch.notAllowed === 1 ? "is" : "are"} left out.`,
+          batch.notAllowed === 1
+            ? "1 order for an event your role can’t refund is left out."
+            : `${formatCount(batch.notAllowed)} orders for events your role can’t refund are left out.`,
         ]
       : []),
   ];
@@ -102,11 +105,11 @@ export function describeBatch(
     };
   }
   if (batch.orders.length === 0 || batch.currency === null) {
-    return { sentence: `There are no orders${scope} that can be refunded.`, notes };
+    return { sentence: `There are no orders${scopeMid} that can be refunded.`, notes };
   }
   const count = batch.orders.length;
   return {
-    sentence: `${formatCount(count)} ${count === 1 ? "order" : "orders"}${scope} can be refunded: ${formatMoney(batch.totalMinor, batch.currency)} in all.`,
+    sentence: `${formatCount(count)} ${count === 1 ? "order" : "orders"}${scopeMid} can be refunded: ${formatMoney(batch.totalMinor, batch.currency)} in all.`,
     notes,
   };
 }

@@ -109,7 +109,7 @@ describe("the orders a refund would cover", () => {
     const period = { from: "2026-11-09", to: "2026-11-13" };
     const two = batchFrom([row(), row({ totalMinor: 400_000 })], EVENTS, { hasMore: false });
     expect(describeBatch(two, period, "Night Market Jazz")).toEqual({
-      sentence: "2 orders for Night Market Jazz, 9 to 13 Nov 2026 can be refunded: ₹12,000.00 in all.",
+      sentence: "2 orders for Night Market Jazz, 9 to 13 Nov 2026, can be refunded: ₹12,000.00 in all.",
       notes: [],
     });
     const one = batchFrom([row(), row({ refundStatus: "pending" }), row({ eventSlug: "someone-elses" })], EVENTS, {
@@ -119,15 +119,25 @@ describe("the orders a refund would cover", () => {
       sentence: "1 order can be refunded: ₹8,000.00 in all.",
       notes: [
         "1 already refunded, or with a refund on its way, is left out.",
-        "1 of events your role can’t refund is left out.",
+        "1 order for an event your role can’t refund is left out.",
       ],
     });
-    const many = batchFrom([row({ refundStatus: "pending" }), row({ refundStatus: "succeeded" })], EVENTS, {
-      hasMore: false,
-    });
-    expect(describeBatch(many, { from: null, to: null }, undefined)).toEqual({
-      sentence: "There are no orders that can be refunded.",
-      notes: ["2 already refunded, or with a refund on its way, are left out."],
+    const many = batchFrom(
+      [
+        row({ refundStatus: "pending" }),
+        row({ refundStatus: "succeeded" }),
+        row({ eventSlug: "someone-elses" }),
+        row({ eventSlug: "someone-elses" }),
+      ],
+      EVENTS,
+      { hasMore: false },
+    );
+    expect(describeBatch(many, { from: "2026-11-13", to: "2026-11-13" }, "Night Market Jazz")).toEqual({
+      sentence: "There are no orders for Night Market Jazz, 13 Nov 2026, that can be refunded.",
+      notes: [
+        "2 already refunded, or with a refund on its way, are left out.",
+        "2 orders for events your role can’t refund are left out.",
+      ],
     });
     expect(
       describeBatch(batchFrom([row()], EVENTS, { hasMore: true }), { from: "2026-11-09", to: null }, undefined)

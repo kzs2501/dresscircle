@@ -156,13 +156,16 @@ function Progress({ state, onStop, onRetry }: { state: BulkRefundState; onStop: 
     );
   }
   const { started, failed, wasStopped, total } = state;
+  const notAsked = total - started - failed.length;
   return (
     <div className="space-y-3">
       <p>
         {started > 0
           ? `Refunds started for ${formatCount(started)} ${started === 1 ? "order" : "orders"}. ${started === 1 ? "It’s" : "They’re"} refunded once the payment provider confirms.`
           : "No refunds started."}
-        {wasStopped ? ` Stopped before the rest of the ${formatCount(total)}, which weren’t asked for.` : ""}
+        {wasStopped && notAsked > 0
+          ? ` Stopped, so the other ${formatCount(notAsked)} ${notAsked === 1 ? "wasn’t" : "weren’t"} refunded.`
+          : ""}
       </p>
       {failed.length > 0 && (
         <Notice tone="bad" title={`${formatCount(failed.length)} didn’t go through`}>
@@ -239,8 +242,10 @@ export function RefundBatchView({
 
   return (
     <div className="space-y-3">
-      <p>{sentence}</p>
-      {notes.length > 0 && (
+      {/* Read live, the orders that could be refunded fall as the batch's own refunds land:
+          once it has started, its progress says what's happening instead. */}
+      {!isActive && <p>{sentence}</p>}
+      {!isActive && notes.length > 0 && (
         <ul className="text-sm text-ink-3">
           {notes.map((note) => (
             <li key={note}>{note}</li>
@@ -322,7 +327,11 @@ export function RefundBatchAnswer({
   );
 }
 
-/** The sentence a request to refund is answered with, for the panel's live region. */
+/**
+ * The sentence a request to refund is answered with, for the panel's live region: said
+ * once, as first read, so the batch's own refunds don't change it while its progress is
+ * announced. Keyed by the question, so the next one is said too.
+ */
 export function RefundBatchSentence({
   question,
   events,
@@ -331,8 +340,11 @@ export function RefundBatchSentence({
   events: readonly OrganiserEventDto[];
 }) {
   const candidates = useQuery(organiserQueries.refundCandidates(refundCandidatesFilter(question), MAX_REFUND_BATCH));
-  if (!candidates.data) return null;
-  const batch = batchFrom(candidates.data.rows, events, { hasMore: candidates.data.hasMore });
-  const eventName = events.find((event) => event.slug === question.event)?.name;
-  return describeBatch(batch, question, eventName).sentence;
+  const [said, setSaid] = useState<string | null>(null);
+  if (said === null && candidates.data) {
+    const batch = batchFrom(candidates.data.rows, events, { hasMore: candidates.data.hasMore });
+    const eventName = events.find((event) => event.slug === question.event)?.name;
+    setSaid(describeBatch(batch, question, eventName).sentence);
+  }
+  return said;
 }

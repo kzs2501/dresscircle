@@ -111,21 +111,24 @@ export const BoxOffice: Story = {
   },
 };
 
+/** Once started, the progress replaces what could be refunded, which falls as the refunds land. */
 export const Refunding: Story = {
-  args: { state: { status: "running", total: 23, done: 12, failed: [] } },
+  args: { batch: batchOf(23), state: { status: "running", total: 23, done: 12, failed: [] } },
   play: async ({ args, canvas, userEvent }) => {
     await expect(canvas.getByText("Refunding: 12 of 23.")).toBeVisible();
+    await expect(canvas.queryByText(/can be refunded/u)).toBeNull();
     await userEvent.click(canvas.getByRole("button", { name: "Stop" }));
     await expect(args.onStop).toHaveBeenCalled();
   },
 };
 
 export const Started: Story = {
-  args: { state: { status: "finished", total: 23, started: 23, failed: [], wasStopped: false } },
+  args: { batch: batchOf(23), state: { status: "finished", total: 23, started: 23, failed: [], wasStopped: false } },
 };
 
 export const SomeFailed: Story = {
   args: {
+    batch: batchOf(23),
     state: {
       status: "finished",
       total: 23,
@@ -144,5 +147,8 @@ export const SomeFailed: Story = {
 };
 
 export const Stopped: Story = {
-  args: { state: { status: "finished", total: 23, started: 8, failed: [], wasStopped: true } },
+  args: { batch: batchOf(23), state: { status: "finished", total: 23, started: 8, failed: [], wasStopped: true } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(/ Stopped, so the other 15 weren’t refunded\.$/u)).toBeVisible();
+  },
 };

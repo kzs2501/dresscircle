@@ -34,7 +34,9 @@ focus and points to why, and a press does nothing.
 
 **What the dialog lists is what's refunded.** The list is copied as the dialog opens, so
 a sale or a refund arriving on the live stream while the owner reads can't change what
-the button does.
+the button does. Once the batch starts, its progress takes the place of what could be
+refunded, which falls as the batch's own refunds land, and a screen reader hears the
+answer once, not again with every refund.
 
 **Refunded one order at a time, through the single refund's endpoint** (016): the same
 permission check, the same "only fulfilled, never twice" rules, the same chaos. Four are

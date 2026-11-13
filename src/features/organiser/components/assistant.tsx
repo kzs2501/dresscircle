@@ -330,7 +330,7 @@ export function Assistant({
         {pending !== null ? (
           "Reading your question…"
         ) : latest?.question.intent === "refund-orders" ? (
-          <RefundBatchSentence question={latest.question} events={events} />
+          <RefundBatchSentence key={latest.id} question={latest.question} events={events} />
         ) : latest ? (
           <LatestSentence asked={latest} events={events} />
         ) : null}
