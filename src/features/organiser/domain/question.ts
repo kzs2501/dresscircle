@@ -64,6 +64,9 @@ const MONTHS: Readonly<Record<string, number>> = {
 const REFUND_REQUEST =
   /^\s*(?:(?:please|pls|can you|could you|go ahead and|lets|let us|i want to|we need to)\s+)*(?:issue\s+refunds?|refund)\b(?!s\b|ed\b)|\brefund\s+(?:all|every|each|the|these|those|their|them|everyone|everybody)\b/u;
 
+/** Asking whether to refund isn't asking to: "should I refund…?", "is it worth refunding…?". */
+const ADVICE = /^\s*(?:should|shall|would|is it|do i|do we|does it|why)\b/u;
+
 /** Why, when a request to refund says. */
 const REFUND_REASON_WORDS: readonly [RegExp, RefundReason][] = [
   [/\b(?:cancel(?:l?ed)?|cancell?ations?|postponed|called off|rescheduled|changed|moved)\b/u, "event_changed"],
@@ -174,7 +177,7 @@ export function readQuestion(text: string, events: readonly QuestionEvent[], tod
   }
 
   // Read first, so its "refund" isn't taken for the status refunded.
-  const isRefundRequest = take(REFUND_REQUEST).length > 0;
+  const isRefundRequest = !ADVICE.test(rest) && take(REFUND_REQUEST).length > 0;
   const refundReason = isRefundRequest
     ? (REFUND_REASON_WORDS.find(([pattern]) => take(pattern).length > 0)?.[1] ?? null)
     : null;
