@@ -14,7 +14,7 @@ import { askGroq, DEFAULT_GROQ_MODEL, GroqError } from "@/app/ai/plan/groq";
 import { readingWithAnswer, readQuestion } from "@/features/organiser/domain/question";
 import { organiserQuestionTask, type OrganiserQuestion } from "@/lib/ai/tasks/organiser-question";
 
-const FIELDS = ["intent", "event", "from", "to", "statuses", "method", "search"] as const;
+const FIELDS = ["intent", "event", "from", "to", "statuses", "method", "search", "refundReason"] as const;
 type Field = (typeof FIELDS)[number];
 
 const { today, cases } = z
