@@ -83,6 +83,11 @@ mode, `/api/*` is a real server on Postgres, and everything below applies.
   route can't be used as a model of one's own: it builds its task on the server, takes
   only a request's text, and answers only with choices from the catalogue's lists, so a
   request with instructions in it can't do anything.
+- **The assistant can't refund** ([ADR 027](docs/decisions/027-actions-the-organiser-confirms.md)): a
+  request to refund only fills in a form. An owner reviews the exact orders and confirms,
+  and each refund goes through the single refund's endpoint, with its permission check
+  and idempotency key, so the confirmation is the boundary in the page and the API's
+  checks are unchanged.
 
 ## Dependencies
 

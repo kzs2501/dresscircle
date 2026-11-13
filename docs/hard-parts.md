@@ -261,3 +261,19 @@ and a link to where its numbers came from.
   (sales by ticket type, by date).
 
 ([decision](decisions/026-an-assistant-that-never-sees-the-data.md))
+
+## 19. Actions the organiser confirms
+
+Ask the assistant to "refund every order for Night Market Jazz, the show was cancelled":
+it says how many orders and how much would go back, an owner reviews exactly those orders
+and confirms, and they're refunded with progress, Stop and Retry.
+
+- **The model can't act:** a refund request is one more kind of answer in its form.
+- **Said before it's done:** the orders, the total, and what was left out and why; past
+  500, narrow it down. The box office can't refund at all.
+- **A review, always, and the number typed from 20 orders;** the list is frozen as the
+  dialog opens, so what it shows is what's refunded.
+- **Through the single refund's endpoint,** four at a time, each order keeping its
+  idempotency key, so a retry never refunds twice.
+
+([decision](decisions/027-actions-the-organiser-confirms.md))

@@ -234,10 +234,11 @@ same in both builds, and it isn't part of the sandbox's backend.
 - **Answer:** `{ "answer": { "category", "city", "month", "keywords", "notApplied" } }`,
   with the category and city from the catalogue's own lists, or null.
 - **The organisers' questions:** `"task": "organiser-question"` answers with `{ "intent",
-"event", "from", "to", "statuses", "method", "search", "notApplied" }`: a query the
-  dashboard then answers from the organisers' API
+"event", "from", "to", "statuses", "method", "search", "refundReason", "notApplied" }`:
+  a query the dashboard then answers from the organisers' API
   ([decision](decisions/026-an-assistant-that-never-sees-the-data.md)). The model never
-  sees an order or a rupee.
+  sees an order or a rupee. An intent of `refund-orders` refunds nothing: an owner
+  reviews the orders and confirms ([decision](decisions/027-actions-the-organiser-confirms.md)).
 - **When it can't:** `503 ai_unavailable` with `Retry-After`: no key set up, a client
   asking more than 10 times a minute or 60 an hour, the free tier's quota spent, or an
   answer that was slow or didn't pass the schema. The page then reads the search by rules
