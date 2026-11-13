@@ -63,3 +63,23 @@ export const BusyInAForm: Story = {
     await expect(document.body.dataset["submitted"]).toBeUndefined();
   },
 };
+
+/** Not yet, for a reason the button points to: it keeps focus, so the reason is read, but ignores presses. */
+export const NotYet: Story = {
+  args: { isDisabled: true, children: "Refund 23 orders", "aria-describedby": "not-yet-reason", onClick: fn() },
+  render: (args) => (
+    <div>
+      <Button {...args} />
+      <p id="not-yet-reason" className="mt-2 text-sm text-ink-3">
+        Type 23 to confirm first.
+      </p>
+    </div>
+  ),
+  play: async ({ args, canvas, userEvent }) => {
+    const button = canvas.getByRole("button", { name: "Refund 23 orders" });
+    await expect(button).toHaveAttribute("aria-disabled", "true");
+    await expect(button).toHaveAccessibleDescription("Type 23 to confirm first.");
+    await userEvent.click(button);
+    await expect(args.onClick).not.toHaveBeenCalled();
+  },
+};

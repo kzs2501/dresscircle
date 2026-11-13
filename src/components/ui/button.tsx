@@ -13,27 +13,34 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 export function Button({
   variant = "primary",
   isBusy = false,
+  isDisabled = false,
   className = "",
   children,
   onClick,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; isBusy?: boolean }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: Variant;
+  isBusy?: boolean;
+  /** Not yet: focusable, so its reason (`aria-describedby`) can be read, but ignoring presses. */
+  isDisabled?: boolean;
+}) {
+  const isInert = isBusy || isDisabled;
   return (
     <button
       {...props}
-      // Busy, the button keeps keyboard focus, which `disabled` would drop to the page,
-      // but ignores presses. That includes Enter in one of its form's fields: a form
+      // Busy or not yet, the button keeps keyboard focus, which `disabled` would drop to the
+      // page, but ignores presses. That includes Enter in one of its form's fields: a form
       // submits by clicking its default button, and a cancelled click doesn't submit.
       aria-busy={isBusy || undefined}
-      aria-disabled={isBusy || undefined}
+      aria-disabled={isInert || undefined}
       onClick={(event) => {
-        if (isBusy) {
+        if (isInert) {
           event.preventDefault();
           return;
         }
         onClick?.(event);
       }}
-      className={`inline-flex min-h-11 press items-center justify-center gap-2 rounded-lg px-5 text-sm font-medium disabled:cursor-not-allowed aria-busy:cursor-progress ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`inline-flex min-h-11 press items-center justify-center gap-2 rounded-lg px-5 text-sm font-medium disabled:cursor-not-allowed aria-busy:cursor-progress ${isDisabled ? "cursor-not-allowed" : ""} ${VARIANT_CLASSES[variant]} ${className}`}
     >
       {/* The label stays visible while busy, so the button never changes width or meaning. */}
       {isBusy && <Spinner className="size-4" />}

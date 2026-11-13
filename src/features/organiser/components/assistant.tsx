@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { OrganiserEventDto } from "@/contract/dto";
@@ -15,7 +15,9 @@ import { Button } from "@/components/ui/button";
 import { EngineBadge } from "@/components/ui/engine-badge";
 import { Spinner } from "@/components/ui/spinner";
 import { answerFor, formatPeriod, needsOf, type Answer } from "@/features/organiser/domain/answers";
+import { REFUND_REASON_LABELS } from "@/features/organiser/domain/refund-reasons";
 import { useOrganiserQuestion, type Asked } from "@/features/organiser/hooks/use-organiser-question";
+import { RefundBatchAnswer, RefundBatchSentence } from "./refund-batch";
 import { SalesChart } from "./sales-chart";
 
 const BLANK: OrganiserQuestion = {
@@ -74,6 +76,9 @@ function understood(question: OrganiserQuestion, events: readonly OrganiserEvent
     ...question.statuses.map((status) => STATUS_LABELS[status]),
     ...(question.method ? [METHOD_LABELS[question.method]] : []),
     ...(question.search ? [`“${question.search}”`] : []),
+    ...(question.intent === "refund-orders" && question.refundReason
+      ? [REFUND_REASON_LABELS[question.refundReason]]
+      : []),
   ];
 }
 
@@ -183,11 +188,14 @@ export function AnswerCard({
   answer,
   events,
   isFailed = false,
+  body,
 }: {
   asked: Asked;
   answer: Answer | null;
   events: readonly OrganiserEventDto[];
   isFailed?: boolean;
+  /** In place of a sentence and a picture: what a request to refund answers with. */
+  body?: ReactNode;
 }) {
   const titleId = useId();
   const notes = [
@@ -204,24 +212,25 @@ export function AnswerCard({
         <span>Understood as {understood(asked.question, events).join(" · ")}.</span>
         <EngineBadge engine={asked.engine} />
       </p>
-      {answer ? (
-        <>
-          <p>{answer.sentence}</p>
-          <Visual answer={answer} />
-          {notes.length > 0 && (
-            <ul className="text-sm text-ink-3">
-              {notes.map((note) => (
-                <li key={note}>{note}</li>
-              ))}
-            </ul>
-          )}
-          <Source answer={answer} events={events} />
-        </>
-      ) : isFailed ? (
-        <p className="text-sm text-bad">Couldn’t load the numbers for this. Check your connection and ask again.</p>
-      ) : (
-        <Spinner label="Working out the answer" />
-      )}
+      {body ??
+        (answer ? (
+          <>
+            <p>{answer.sentence}</p>
+            <Visual answer={answer} />
+            {notes.length > 0 && (
+              <ul className="text-sm text-ink-3">
+                {notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            )}
+            <Source answer={answer} events={events} />
+          </>
+        ) : isFailed ? (
+          <p className="text-sm text-bad">Couldn’t load the numbers for this. Check your connection and ask again.</p>
+        ) : (
+          <Spinner label="Working out the answer" />
+        ))}
     </article>
   );
 }
@@ -235,6 +244,20 @@ function LiveAnswer({ asked, events }: { asked: Asked; events: readonly Organise
 function LatestSentence({ asked, events }: { asked: Asked; events: readonly OrganiserEventDto[] }) {
   const { answer } = useAnswer(asked, events);
   return answer?.sentence ?? null;
+}
+
+/** One question, answered: a request to refund by the orders it covers, anything else from the numbers. */
+function AskedItem({ asked, events }: { asked: Asked; events: readonly OrganiserEventDto[] }) {
+  return asked.question.intent === "refund-orders" ? (
+    <AnswerCard
+      asked={asked}
+      answer={null}
+      events={events}
+      body={<RefundBatchAnswer question={asked.question} events={events} />}
+    />
+  ) : (
+    <LiveAnswer asked={asked} events={events} />
+  );
 }
 
 /**
@@ -306,6 +329,8 @@ export function Assistant({
       <p role="status" className="sr-only">
         {pending !== null ? (
           "Reading your question…"
+        ) : latest?.question.intent === "refund-orders" ? (
+          <RefundBatchSentence question={latest.question} events={events} />
         ) : latest ? (
           <LatestSentence asked={latest} events={events} />
         ) : null}
@@ -319,7 +344,7 @@ export function Assistant({
         <ol aria-label="Your questions, newest first" className="space-y-3">
           {asked.map((entry) => (
             <li key={entry.id}>
-              <LiveAnswer asked={entry} events={events} />
+              <AskedItem asked={entry} events={events} />
             </li>
           ))}
         </ol>

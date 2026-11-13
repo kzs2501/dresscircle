@@ -8,9 +8,10 @@
 import type { OrderRowDto, OrganiserEventDto } from "@/contract/dto";
 import type { OrderFilters } from "@/contract/queries";
 import type { CurrencyCode } from "@/core/money";
+import { formatCount, formatMoney } from "@/lib/format";
 import type { RefundReason } from "@/core/statuses";
 import type { OrganiserQuestion } from "@/lib/ai/tasks/organiser-question";
-import { ordersFilterFor } from "./answers";
+import { formatPeriod, ordersFilterFor } from "./answers";
 
 /** The most orders refunded at once: past this, narrow it down. */
 export const MAX_REFUND_BATCH = 500;
@@ -69,3 +70,43 @@ export function batchFrom(
 }
 
 export const needsTypingToConfirm = (count: number) => count >= TYPE_TO_CONFIRM_FROM;
+
+/** What a batch would do, said before anything is done: the answer to a request to refund. */
+export function describeBatch(
+  batch: RefundBatch,
+  question: Pick<OrganiserQuestion, "from" | "to">,
+  eventName: string | undefined,
+): { sentence: string; notes: string[] } {
+  const scope = [
+    eventName ? ` for ${eventName}` : "",
+    question.from || question.to
+      ? `, ${formatPeriod(question.from ?? question.to ?? "", question.to ?? question.from ?? "")}`
+      : "",
+  ].join("");
+  const notes = [
+    ...(batch.alreadyRefunding > 0
+      ? [
+          `${formatCount(batch.alreadyRefunding)} already refunded, or with a refund on its way, ${batch.alreadyRefunding === 1 ? "is" : "are"} left out.`,
+        ]
+      : []),
+    ...(batch.notAllowed > 0
+      ? [
+          `${formatCount(batch.notAllowed)} of events your role can’t refund ${batch.notAllowed === 1 ? "is" : "are"} left out.`,
+        ]
+      : []),
+  ];
+  if (batch.isTooMany) {
+    return {
+      sentence: `That’s more than ${formatCount(MAX_REFUND_BATCH)} orders${scope}: too many at once. Narrow it down by event, date or payment method.`,
+      notes,
+    };
+  }
+  if (batch.orders.length === 0 || batch.currency === null) {
+    return { sentence: `There are no orders${scope} that can be refunded.`, notes };
+  }
+  const count = batch.orders.length;
+  return {
+    sentence: `${formatCount(count)} ${count === 1 ? "order" : "orders"}${scope} can be refunded: ${formatMoney(batch.totalMinor, batch.currency)} in all.`,
+    notes,
+  };
+}
