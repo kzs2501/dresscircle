@@ -339,7 +339,7 @@ test.describe("refunds the organiser confirms (ADR 027)", () => {
     const refund = dialog.getByRole("button", { name: `Refund ${String(count)} orders (${total})` });
     // Not yet: until the number is typed, the button says so, and a press does nothing.
     await expect(refund).toBeDisabled();
-    await refund.click({ force: true });
+    await refund.press("Enter");
     await expect(dialog).toBeVisible();
     expect((await sandbox.state()).refunds).toEqual({});
 
