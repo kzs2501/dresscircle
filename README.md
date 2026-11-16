@@ -195,7 +195,7 @@ What each suite covers in detail, and notes on accessibility and money:
 
 ## Documentation
 
-- [The hard parts](docs/hard-parts.md): sixteen problems, each solved properly
+- [The hard parts](docs/hard-parts.md): nineteen problems, each solved properly
 - [Architecture](docs/architecture.md): the layers, and the lint rules that keep them apart
 - [API](docs/api.md): every endpoint, its errors, and what may be cached
 - [Conventions](docs/conventions.md): naming and code style
