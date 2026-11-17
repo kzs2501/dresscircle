@@ -21,7 +21,11 @@ export const ENGINE_BUDGET_MS = 4_000;
  * next one. A late answer is ignored.
  */
 function untilAborted<Answer>(work: Promise<Answer>, signal: AbortSignal): Promise<Answer> {
-  if (signal.aborted) return Promise.reject(signal.reason as Error);
+  if (signal.aborted) {
+    // Given up on before it began: its answer, or its failure, goes nowhere.
+    work.catch(() => undefined);
+    return Promise.reject(signal.reason as Error);
+  }
   return new Promise<Answer>((resolve, reject) => {
     const giveUp = () => {
       reject(signal.reason as Error);
