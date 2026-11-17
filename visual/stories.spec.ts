@@ -7,7 +7,9 @@ if (!existsSync(INDEX)) throw new Error(`No ${INDEX}: build the catalogue first 
 
 const index = JSON.parse(readFileSync(INDEX, "utf8")) as { entries: Record<string, StoryEntry> };
 const stories = Object.values(index.entries).filter(
-  (entry) => entry.type === "story" && !entry.tags.includes("!visual"),
+  // A story with nothing to see opts out with the `no-visual` tag. (Storybook reads a tag
+  // starting with "!" as removing that tag, so "!visual" never reaches the index.)
+  (entry) => entry.type === "story" && !entry.tags.includes("no-visual"),
 );
 
 /**

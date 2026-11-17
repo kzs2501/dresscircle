@@ -64,6 +64,8 @@ export const LeftSomeUnrefunded: Story = {
 
 /** Every refund started: nothing to show, only what a screen reader heard. */
 export const AllStarted: Story = {
+  // Nothing is drawn, so there's nothing to screenshot.
+  tags: ["no-visual"],
   args: { runs: [run(3, "Night Market Jazz", 4, { outcomes: started(4) })] },
   play: async ({ canvas }) => {
     await expect(canvas.queryByRole("region", { name: "Refunds" })).toBeNull();
