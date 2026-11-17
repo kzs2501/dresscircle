@@ -245,3 +245,9 @@ export function answerFor(
     notes,
   };
 }
+
+/** The answer to a question about another organiser's event (DC-12): not yours, and what is. */
+export function notYoursSentence(name: string, own: readonly { name: string }[]) {
+  const yours = new Intl.ListFormat("en-GB", { type: "disjunction" }).format(own.map((event) => event.name));
+  return `${name} isn’t one of your events.${own.length > 0 ? ` You can ask about ${yours}.` : ""}`;
+}

@@ -285,6 +285,23 @@ test.describe("asking about your sales (ADR 026)", () => {
     await expect(answers(page).getByText(/^Across your events, you’ve sold /u)).toBeVisible();
   });
 
+  test("a question about another organiser's event is told so, with no request to an engine (DC-12)", async ({
+    page,
+    organiser,
+  }) => {
+    const asked: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/ai/plan") asked.push(request.url());
+    });
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, "issue refunds for Monsoon Strings");
+    await expect(
+      answers(page).getByText(/^Monsoon Strings isn’t one of your events\. You can ask about .*Night Market Jazz/u),
+    ).toBeVisible();
+    await expect(answers(page).getByRole("button", { name: "Review and refund…" })).toHaveCount(0);
+    expect(asked).toEqual([]);
+  });
+
   test("a stalled built-in model doesn't hold the assistant up (DC-02)", async ({ page, organiser }) => {
     // Chrome's model says it's ready, then never answers, and ignores being given up on.
     await page.addInitScript(() => {

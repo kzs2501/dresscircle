@@ -100,3 +100,15 @@ export const WorkingItOut: Story = { args: { answer: null } };
 export const NumbersFailed: Story = {
   args: { answer: null, failure: "Couldn’t load the numbers for this. Check your connection and ask again." },
 };
+
+/** Another organiser's event: said plainly, with the events this account can ask about (DC-12). */
+export const NotYourEvent: Story = {
+  args: {
+    asked: asked("how is Monsoon Strings selling?", { intent: "summary" }, { notYours: "Monsoon Strings" }),
+    answer: null,
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(/^Monsoon Strings isn’t one of your events\. You can ask about /u)).toBeVisible();
+    await expect(canvas.queryByText(/^Understood as/u)).toBeNull();
+  },
+};

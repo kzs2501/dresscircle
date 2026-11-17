@@ -1,21 +1,21 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useCallback, useId, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OrganiserEventDto } from "@/contract/dto";
 import { writeOrderSearchParams } from "@/contract/queries";
 import type { OrderStatus, PaymentMethod } from "@/core/statuses";
 import { ApiError } from "@/lib/api-client";
 import { formatCount, formatPercent } from "@/lib/format";
-import { organiserQueries } from "@/lib/queries";
+import { eventQueries, organiserQueries } from "@/lib/queries";
 import { routes } from "@/lib/routes";
 import { MAX_AI_REQUEST_LENGTH } from "@/lib/ai/engine";
 import type { OrganiserQuestion, QuestionIntent } from "@/lib/ai/tasks/organiser-question";
 import { Button } from "@/components/ui/button";
 import { EngineBadge } from "@/components/ui/engine-badge";
 import { Spinner } from "@/components/ui/spinner";
-import { answerFor, formatPeriod, needsOf, type Answer } from "@/features/organiser/domain/answers";
+import { answerFor, formatPeriod, needsOf, notYoursSentence, type Answer } from "@/features/organiser/domain/answers";
 import { REFUND_REASON_LABELS } from "@/features/organiser/domain/refund-reasons";
 import { useOrganiserQuestion, type Asked } from "@/features/organiser/hooks/use-organiser-question";
 import { RefundBatchAnswer, RefundBatchSentence } from "./refund-batch";
@@ -220,10 +220,13 @@ export function AnswerCard({
         “{asked.text}”
       </h3>
       <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-2">
-        <span>Understood as {understood(asked.question, events).join(" · ")}.</span>
+        {asked.notYours === undefined && <span>Understood as {understood(asked.question, events).join(" · ")}.</span>}
         <EngineBadge engine={asked.engine} />
       </p>
-      {body ??
+      {asked.notYours !== undefined ? (
+        <p>{notYoursSentence(asked.notYours, events)}</p>
+      ) : (
+        (body ??
         (answer ? (
           <>
             <p>{answer.sentence}</p>
@@ -241,7 +244,8 @@ export function AnswerCard({
           <p className="text-sm text-bad">{failure}</p>
         ) : (
           <Spinner label="Working out the answer" />
-        ))}
+        )))
+      )}
     </article>
   );
 }
@@ -257,9 +261,14 @@ function LatestSentence({ asked, events }: { asked: Asked; events: readonly Orga
   return answer?.sentence ?? null;
 }
 
-/** One question, answered: a request to refund by the orders it covers, anything else from the numbers. */
+/**
+ * One question, answered: about another organiser's event by saying so, a request to
+ * refund by the orders it covers, anything else from the numbers.
+ */
 function AskedItem({ asked, events }: { asked: Asked; events: readonly OrganiserEventDto[] }) {
-  return asked.question.intent === "refund-orders" ? (
+  return asked.notYours !== undefined ? (
+    <AnswerCard asked={asked} answer={null} events={events} />
+  ) : asked.question.intent === "refund-orders" ? (
     <AnswerCard
       asked={asked}
       answer={null}
@@ -284,7 +293,15 @@ export function Assistant({
   /** The event the overview shows: what a question that names none is about. */
   shownEvent: string | null;
 }) {
-  const { asked, pending, ask, askReady } = useOrganiserQuestion(events, shownEvent);
+  // The public events, so a question about another organiser's can be told it isn't theirs:
+  // asked for as the panel opens, and waited for if a question comes first.
+  const queryClient = useQueryClient();
+  useQuery(eventQueries.list());
+  const loadCatalogue = useCallback(
+    () => queryClient.query({ ...eventQueries.list(), staleTime: "static" }),
+    [queryClient],
+  );
+  const { asked, pending, ask, askReady } = useOrganiserQuestion(events, shownEvent, loadCatalogue);
   const [text, setText] = useState("");
   const latest = asked[0];
 
@@ -340,6 +357,8 @@ export function Assistant({
       <p role="status" className="sr-only">
         {pending !== null ? (
           "Reading your question…"
+        ) : latest?.notYours !== undefined ? (
+          notYoursSentence(latest.notYours, events)
         ) : latest?.question.intent === "refund-orders" ? (
           <RefundBatchSentence key={latest.id} question={latest.question} events={events} />
         ) : latest ? (

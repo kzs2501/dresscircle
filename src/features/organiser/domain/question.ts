@@ -238,6 +238,25 @@ export function readQuestion(text: string, events: readonly QuestionEvent[], tod
 }
 
 /**
+ * The other organiser's event a question names, read by the same words as the account's
+ * own, when it names none of those: "refund Monsoon Strings", from someone who doesn't
+ * run it, is told so rather than read as about all their events (DC-12). None when it
+ * names one of theirs, no event, or two equally.
+ */
+export function foreignEventIn(
+  text: string,
+  own: readonly QuestionEvent[],
+  catalogue: readonly QuestionEvent[],
+  today: string,
+): string | null {
+  if (readQuestion(text, own, today).question.event !== null) return null;
+  const ownSlugs = new Set(own.map((event) => event.slug));
+  const others = catalogue.filter((event) => !ownSlugs.has(event.slug));
+  const { event } = readQuestion(text, others, today).question;
+  return others.find((other) => other.slug === event)?.name ?? null;
+}
+
+/**
  * An engine's reading of a question with the rules' on top: the engine read the whole
  * question, so its kind of answer and event stand, but what the rules read is exact
  * (a period worked out from today, statuses and methods by name, an email or order id),

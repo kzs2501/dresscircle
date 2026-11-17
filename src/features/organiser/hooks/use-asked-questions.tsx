@@ -13,6 +13,8 @@ export interface Asked {
   engine: EngineName | null;
   /** Words neither the rules nor an engine could use. */
   unused: string[];
+  /** Another organiser's event the question named (DC-12): answered by saying so, with no numbers. */
+  notYours?: string;
 }
 
 /** Questions kept in the panel, newest first. In memory only: a reload starts afresh. */

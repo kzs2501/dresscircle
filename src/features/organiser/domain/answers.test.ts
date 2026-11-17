@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { OrganiserQuestion } from "@/lib/ai/tasks/organiser-question";
 import { EVENTS, METRICS, questionWith } from "@/features/organiser/testing/answer-fixtures";
-import { answerFor, formatPeriod, needsOf, ordersFilterFor } from "./answers";
+import { answerFor, formatPeriod, needsOf, notYoursSentence, ordersFilterFor } from "./answers";
 
 const question = questionWith;
 const answer = (fields: Partial<OrganiserQuestion>, data: Partial<Parameters<typeof answerFor>[1]> = {}) =>
@@ -169,5 +169,21 @@ describe("answers from the dashboard's own numbers", () => {
     const ranked = answer({ intent: "ticket-types" }, { metrics: { ...METRICS, tiers } })?.visual;
     expect(ranked).toMatchObject({ tiers: [{ tierName: "VIP" }, { tierName: "Standing" }, { tierName: "Comp" }] });
     expect(needsOf(question({}))).toEqual({ kind: "metrics", eventSlug: undefined });
+  });
+});
+
+describe("a question about another organiser's event (DC-12)", () => {
+  it("says it isn't yours, and which events are", () => {
+    const own = [
+      { name: "Night Market Jazz" },
+      { name: "Lakeside Lights Festival" },
+      { name: "Frontend Systems Summit" },
+    ];
+    expect(notYoursSentence("Monsoon Strings", own)).toBe(
+      "Monsoon Strings isn’t one of your events. You can ask about Night Market Jazz, Lakeside Lights Festival or Frontend Systems Summit.",
+    );
+    expect(notYoursSentence("Monsoon Strings", own.slice(0, 1))).toBe(
+      "Monsoon Strings isn’t one of your events. You can ask about Night Market Jazz.",
+    );
   });
 });

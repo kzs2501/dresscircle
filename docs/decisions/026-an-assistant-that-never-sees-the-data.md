@@ -38,7 +38,12 @@ or a buyer, theirs is kept: the free model took "this week" for the last seven d
 
 **Access is the API's, as before.** In the browser, an engine is offered only the signed-in
 account's events, so an answer naming someone else's can't pass the schema, and the rules'
-reading stands. The server's copy of the task lists every catalogue event, because the
+reading stands. Read that way, a question naming another organiser's event would be about
+none, which is all of yours, so the page first reads it against the public list of
+events: "refund Monsoon Strings", asked by someone who doesn't run it, gets "Monsoon
+Strings isn't one of your events", with the ones you can ask about, and no engine is
+asked (the November bug hunt found it answered about all of them). The server's copy of
+the task lists every catalogue event, because the
 route doesn't know who's asking; it only ever returns a choice, never data. Every number
 still comes through the API, which checks the account's access as it always has (014).
 

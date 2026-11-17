@@ -18,8 +18,14 @@ afterEach(() => {
   plan.mockReset();
 });
 
-const setup = (shownEvent: string | null = null) =>
-  renderHook(() => useOrganiserQuestion(EVENTS, shownEvent), { wrapper: AskedQuestionsProvider });
+/** The public catalogue: the account's events and another organiser's. */
+const CATALOGUE = [
+  ...EVENTS,
+  { slug: "monsoon-strings", name: "Monsoon Strings", city: "Mumbai", startsAt: "2027-01-16T19:00:00+05:30" },
+];
+const loadCatalogue = () => Promise.resolve(CATALOGUE);
+const setup = (shownEvent: string | null = null, load: () => Promise<typeof CATALOGUE> = loadCatalogue) =>
+  renderHook(() => useOrganiserQuestion(EVENTS, shownEvent, load), { wrapper: AskedQuestionsProvider });
 
 describe("asking about your sales", () => {
   it("reads what the rules can place without an engine", async () => {
@@ -98,5 +104,35 @@ describe("asking about your sales", () => {
       "suggestion 3",
       "suggestion 2",
     ]);
+  });
+
+  it("says another organiser's event isn't yours, without asking an engine (DC-12)", async () => {
+    const { result } = setup();
+    await act(() => result.current.ask("issue refunds for Monsoon Strings"));
+    expect(plan).not.toHaveBeenCalled();
+    expect(result.current.asked[0]).toMatchObject({ engine: null, notYours: "Monsoon Strings" });
+  });
+
+  it("waits for the public events if a question comes before they've loaded", async () => {
+    let arrive: (events: typeof CATALOGUE) => void = () => undefined;
+    const { result } = setup(null, () => new Promise((resolve) => (arrive = resolve)));
+    let asking: Promise<void> = Promise.resolve();
+    act(() => {
+      asking = result.current.ask("issue refunds for Monsoon Strings");
+    });
+    expect(result.current.pending).toBe("issue refunds for Monsoon Strings");
+    arrive(CATALOGUE);
+    await act(() => asking);
+    expect(plan).not.toHaveBeenCalled();
+    expect(result.current.asked[0]).toMatchObject({ notYours: "Monsoon Strings" });
+  });
+
+  it("goes on without the public events if they fail", async () => {
+    plan.mockResolvedValue({ ok: false, isAborted: false, failures: {} });
+    const { result } = setup(null, () => Promise.reject(new Error("offline")));
+    await act(() => result.current.ask("issue refunds for Monsoon Strings"));
+    expect(plan).toHaveBeenCalledTimes(1);
+    expect(result.current.asked[0]).toMatchObject({ unused: ["monsoon", "strings"] });
+    expect(result.current.asked[0]?.notYours).toBeUndefined();
   });
 });

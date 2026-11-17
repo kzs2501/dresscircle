@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { CATALOG } from "@/core/catalog";
-import { readingWithAnswer, readQuestion } from "./question";
+import { foreignEventIn, readingWithAnswer, readQuestion } from "./question";
 
 /** A Friday: this week began on Monday the 9th. */
 const TODAY = "2026-11-13";
@@ -206,5 +206,31 @@ describe("a request to refund, told from a question about refunds", () => {
       intent: "refund-orders",
       refundReason: "event_changed",
     });
+  });
+});
+
+describe("a question about another organiser's event (DC-12)", () => {
+  /** Nandini's events, at Lakeside Live; Monsoon Strings is Rangmanch Arts'. */
+  const OWN = CATALOG.filter((event) => event.organiserId === "lakeside-live");
+  const foreign = (text: string, catalogue: readonly (typeof CATALOG)[number][] = CATALOG) =>
+    foreignEventIn(text, OWN, catalogue, TODAY);
+
+  it("names the event the question is about when it isn't one of yours", () => {
+    expect(foreign("how is Monsoon Strings selling?")).toBe("Monsoon Strings");
+    expect(foreign("issue refunds for Monsoon Strings")).toBe("Monsoon Strings");
+    expect(foreign("ceramics ticket types")).toBe("Open Studio: Ceramics");
+  });
+
+  it("is none when the question names one of yours, or no event at all", () => {
+    expect(foreign("Night Market Jazz sales")).toBeNull();
+    expect(foreign("which shows are doing well?")).toBeNull();
+    expect(foreign("refunded orders last week")).toBeNull();
+  });
+
+  it("doesn't guess between other organisers' events", () => {
+    const [monsoon] = CATALOG.filter((event) => event.name === "Monsoon Strings");
+    if (!monsoon) throw new Error("Monsoon Strings is in the catalogue");
+    const twin = { ...monsoon, slug: "monsoon-ragas", name: "Monsoon Ragas" };
+    expect(foreign("monsoon sales", [...CATALOG, twin])).toBeNull();
   });
 });
