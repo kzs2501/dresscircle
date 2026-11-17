@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ROLE_LABELS } from "@/core/organisations";
@@ -8,8 +8,11 @@ import { routes } from "@/lib/routes";
 import { Button } from "@/components/ui/button";
 import { PauseToggle } from "@/components/ui/pause-toggle";
 import { Spinner } from "@/components/ui/spinner";
+import { AskedQuestionsProvider } from "@/features/organiser/hooks/use-asked-questions";
 import { LiveUpdatesProvider, useLiveUpdates, type LiveStatus } from "@/features/organiser/hooks/use-live-updates";
 import { useOrganiserSession } from "@/features/organiser/hooks/use-organiser-session";
+import { RefundRunsProvider, useRefundRuns } from "@/features/organiser/hooks/use-refund-runs";
+import { RefundsInProgress } from "./refunds-in-progress";
 
 const STATUS_LABELS: Record<LiveStatus, string> = {
   connecting: "Connecting…",
@@ -41,6 +44,31 @@ const NAV = [
   },
 ];
 
+/** Signing out would leave refunds unstarted, so while a batch runs it waits, and says why. */
+function SignOut({ onSignOut }: { onSignOut: () => void }) {
+  const { isRunning } = useRefundRuns();
+  const hintId = useId();
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        isDisabled={isRunning}
+        aria-describedby={isRunning ? hintId : undefined}
+        onClick={onSignOut}
+        className="min-h-9 px-3"
+      >
+        Sign out
+      </Button>
+      {isRunning && (
+        <span id={hintId} className="text-xs text-ink-3">
+          Stop the refunds first.
+        </span>
+      )}
+    </>
+  );
+}
+
 /**
  * The signed-in dashboard: who you are, where you can go, and whether updates are
  * live. Without a session it sends you to sign in; with one it keeps a single live
@@ -66,38 +94,41 @@ export function OrganiserShell({ children }: { children: ReactNode }) {
 
   return (
     <LiveUpdatesProvider>
-      <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
-          <nav aria-label="Organisers">
-            <ul className="flex gap-1">
-              {NAV.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    href={item.href}
-                    aria-current={item.isCurrent(path) ? "page" : undefined}
-                    className="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-medium text-ink-2 hover:bg-sunk hover:text-ink aria-[current=page]:bg-sunk aria-[current=page]:text-ink"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <div className="flex flex-wrap items-center gap-4">
-            <LiveToggle />
-            {account && (
-              <p className="text-sm text-ink-2">
-                <span className="font-medium text-ink">{account.name}</span> · {ROLE_LABELS[account.role]},{" "}
-                {account.organisation.name}
-              </p>
-            )}
-            <Button type="button" variant="ghost" onClick={() => void signOut()} className="min-h-9 px-3">
-              Sign out
-            </Button>
+      <AskedQuestionsProvider>
+        <RefundRunsProvider>
+          <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
+              <nav aria-label="Organisers">
+                <ul className="flex gap-1">
+                  {NAV.map((item) => (
+                    <li key={item.label}>
+                      <Link
+                        href={item.href}
+                        aria-current={item.isCurrent(path) ? "page" : undefined}
+                        className="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-medium text-ink-2 hover:bg-sunk hover:text-ink aria-[current=page]:bg-sunk aria-[current=page]:text-ink"
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              <div className="flex flex-wrap items-center gap-4">
+                <LiveToggle />
+                {account && (
+                  <p className="text-sm text-ink-2">
+                    <span className="font-medium text-ink">{account.name}</span> · {ROLE_LABELS[account.role]},{" "}
+                    {account.organisation.name}
+                  </p>
+                )}
+                <SignOut onSignOut={() => void signOut()} />
+              </div>
+            </div>
+            <RefundsInProgress />
+            <div className="pt-8">{children}</div>
           </div>
-        </div>
-        <div className="pt-8">{children}</div>
-      </div>
+        </RefundRunsProvider>
+      </AskedQuestionsProvider>
     </LiveUpdatesProvider>
   );
 }

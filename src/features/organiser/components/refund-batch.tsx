@@ -25,7 +25,9 @@ import {
   type RefundBatch,
 } from "@/features/organiser/domain/refund-batch";
 import { REFUND_REASON_LABELS } from "@/features/organiser/domain/refund-reasons";
-import { useBulkRefund, type BulkRefundState } from "@/features/organiser/hooks/use-bulk-refund";
+import { summaryOf, type RunSummary } from "@/features/organiser/domain/refund-run";
+import type { Asked } from "@/features/organiser/hooks/use-asked-questions";
+import { useRefundRuns } from "@/features/organiser/hooks/use-refund-runs";
 
 /** Orders listed in the dialog by name; the rest are counted. */
 const LISTED = 10;
@@ -140,14 +142,24 @@ function ReviewDialog({
   );
 }
 
-function Progress({ state, onStop, onRetry }: { state: BulkRefundState; onStop: () => void; onRetry: () => void }) {
-  if (state.status === "idle") return null;
-  if (state.status === "running") {
+function Progress({
+  run,
+  onStop,
+  onRetry,
+  onRefundNotAsked,
+}: {
+  run: RunSummary | null;
+  onStop: () => void;
+  onRetry: () => void;
+  onRefundNotAsked: () => void;
+}) {
+  if (!run) return null;
+  if (run.isRunning) {
     return (
       <div className="flex flex-wrap items-center gap-3">
         <Spinner className="size-4" />
         <span>
-          Refunding: {formatCount(state.done)} of {formatCount(state.total)}.
+          Refunding: {formatCount(run.done)} of {formatCount(run.total)}.
         </span>
         <Button type="button" variant="secondary" onClick={onStop}>
           Stop
@@ -155,17 +167,13 @@ function Progress({ state, onStop, onRetry }: { state: BulkRefundState; onStop: 
       </div>
     );
   }
-  const { started, failed, wasStopped, total } = state;
-  const notAsked = total - started - failed.length;
+  const { started, failed, notAsked } = run;
   return (
     <div className="space-y-3">
       <p>
         {started > 0
           ? `Refunds started for ${formatCount(started)} ${started === 1 ? "order" : "orders"}. ${started === 1 ? "It’s" : "They’re"} refunded once the payment provider confirms.`
           : "No refunds started."}
-        {wasStopped && notAsked > 0
-          ? ` Stopped, so the other ${formatCount(notAsked)} ${notAsked === 1 ? "wasn’t" : "weren’t"} refunded.`
-          : ""}
       </p>
       {failed.length > 0 && (
         <Notice tone="bad" title={`${formatCount(failed.length)} didn’t go through`}>
@@ -181,6 +189,16 @@ function Progress({ state, onStop, onRetry }: { state: BulkRefundState; onStop: 
             Retry the {formatCount(failed.length)} that failed
           </Button>
         </Notice>
+      )}
+      {notAsked.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <p>
+            Stopped: {formatCount(notAsked.length)} {notAsked.length === 1 ? "wasn’t" : "weren’t"} asked for.
+          </p>
+          <Button type="button" variant="secondary" onClick={onRefundNotAsked}>
+            Refund the {formatCount(notAsked.length)}
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -198,19 +216,22 @@ export function RefundBatchView({
   question,
   events,
   isFailed = false,
-  state,
+  run,
   onConfirm,
   onStop,
   onRetry,
+  onRefundNotAsked,
 }: {
   batch: RefundBatch | null;
   question: OrganiserQuestion;
   events: readonly OrganiserEventDto[];
   isFailed?: boolean;
-  state: BulkRefundState;
+  /** The batch confirmed from this answer, if any: running, or how it ended. */
+  run: RunSummary | null;
   onConfirm: (orders: readonly BatchOrder[], reason: RefundReason) => void;
   onStop: () => void;
   onRetry: (reason: RefundReason) => void;
+  onRefundNotAsked: (reason: RefundReason) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const progress = useRef<HTMLDivElement>(null);
@@ -220,10 +241,12 @@ export function RefundBatchView({
   const canRefund = events.some((event) => event.permissions.includes("orders:refund"));
   const eventName = events.find((event) => event.slug === question.event)?.name;
 
-  // Once confirmed, the dialog is gone: focus goes to the progress that replaced it.
-  const isActive = state.status !== "idle";
+  // Once confirmed here, the dialog is gone: focus goes to the progress that replaced it.
+  // Coming back to a batch already under way leaves focus where it is.
+  const isActive = run !== null;
+  const wasConfirmedHere = useRef(false);
   useEffect(() => {
-    if (isActive) progress.current?.focus();
+    if (isActive && wasConfirmedHere.current) progress.current?.focus();
   }, [isActive]);
 
   if (!canRefund) {
@@ -238,7 +261,7 @@ export function RefundBatchView({
   }
 
   const { sentence, notes } = describeBatch(batch, question, eventName);
-  const canReview = state.status === "idle" && !batch.isTooMany && batch.orders.length > 0;
+  const canReview = !isActive && !batch.isTooMany && batch.orders.length > 0;
 
   return (
     <div className="space-y-3">
@@ -272,16 +295,21 @@ export function RefundBatchView({
           dialog={dialog}
           onConfirm={(chosen) => {
             setReason(chosen);
+            wasConfirmedHere.current = true;
             onConfirm(frozen.orders, chosen);
           }}
         />
       )}
-      <div ref={progress} tabIndex={-1} role="status" className="outline-none">
+      {/* Its progress is announced at milestones by the dashboard's refunds strip, not here. */}
+      <div ref={progress} tabIndex={-1} className="outline-none">
         <Progress
-          state={state}
+          run={run}
           onStop={onStop}
           onRetry={() => {
             onRetry(reason);
+          }}
+          onRefundNotAsked={() => {
+            onRefundNotAsked(reason);
           }}
         />
       </div>
@@ -295,33 +323,38 @@ export function RefundBatchView({
   );
 }
 
-/** A request to refund, with the orders it covers read live and refunds run here. */
-export function RefundBatchAnswer({
-  question,
-  events,
-}: {
-  question: OrganiserQuestion;
-  events: readonly OrganiserEventDto[];
-}) {
+/** A request to refund, with the orders it covers read live; the batch runs in the dashboard's shell. */
+export function RefundBatchAnswer({ asked, events }: { asked: Asked; events: readonly OrganiserEventDto[] }) {
+  const { question } = asked;
   const candidates = useQuery(organiserQueries.refundCandidates(refundCandidatesFilter(question), MAX_REFUND_BATCH));
-  const { state, start, retryFailed, stop } = useBulkRefund();
+  const { runs, start, refund, stop } = useRefundRuns();
+  const run = runs[asked.id];
+  const summary = run ? summaryOf(run) : null;
   const batch = candidates.data ? batchFrom(candidates.data.rows, events, { hasMore: candidates.data.hasMore }) : null;
+  const label = events.find((event) => event.slug === question.event)?.name ?? "your events";
   return (
     <RefundBatchView
       batch={batch}
       question={question}
       events={events}
       isFailed={candidates.isError}
-      state={state}
+      run={summary}
       onConfirm={(orders, reason) => {
-        void start(
-          orders.map((order) => order.id),
-          reason,
-        );
+        start(asked.id, label, orders, reason);
       }}
-      onStop={stop}
+      onStop={() => {
+        stop(asked.id);
+      }}
       onRetry={(reason) => {
-        void retryFailed(reason);
+        if (summary)
+          refund(
+            asked.id,
+            summary.failed.map((failure) => failure.orderId),
+            reason,
+          );
+      }}
+      onRefundNotAsked={(reason) => {
+        if (summary) refund(asked.id, summary.notAsked, reason);
       }}
     />
   );

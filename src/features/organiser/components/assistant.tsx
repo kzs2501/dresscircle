@@ -253,7 +253,7 @@ function AskedItem({ asked, events }: { asked: Asked; events: readonly Organiser
       asked={asked}
       answer={null}
       events={events}
-      body={<RefundBatchAnswer question={asked.question} events={events} />}
+      body={<RefundBatchAnswer asked={asked} events={events} />}
     />
   ) : (
     <LiveAnswer asked={asked} events={events} />

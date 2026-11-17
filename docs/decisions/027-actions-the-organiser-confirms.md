@@ -47,6 +47,15 @@ refunds in flight finish and starts no more; what didn't go through is listed wi
 API's reason, with "Retry the ones that failed". While refunds run, the browser asks
 before the tab closes.
 
+**The batch belongs to the dashboard, not the page that asked.** Its state lives in the
+dashboard's shell, with the questions asked, so opening the orders table mid-batch doesn't
+stop it (the November bug hunt found that it silently did, after the four in flight).
+A strip on every dashboard page says how far it's got, with Stop, and afterwards what's
+left over, until it's dismissed. A screen reader hears a batch start, pass each quarter
+and end, not every order. Signing out waits while refunds run. Every order the owner
+confirmed keeps its outcome, started, failed or not asked for, so a retry that's stopped
+part-way still lists the orders never asked for, with "Refund the N".
+
 **No suggestion button refunds.** An irreversible action never starts from one click.
 
 ## Consequences
@@ -57,6 +66,7 @@ before the tab closes.
   many refunds?", "which were refunded?"), and a question asking whether to ("should I
   refund…?") is never offered as one. The evals hold them at 85% across 38 questions,
   with the reason scored.
-- **Not done:** a batch is in the browser tab that started it; a server would run it as a
-  job that survives the tab, and send each buyer an email. Refunds are whole orders, as
+- **Not done:** a batch is in the browser tab that started it, and leaving the dashboard
+  stops what hasn't started; a server would run it as a job that survives the tab, and
+  send each buyer an email. Refunds are whole orders, as
   for one refund (016).

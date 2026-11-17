@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, fn, within } from "storybook/test";
 import type { OrganiserEventDto } from "@/contract/dto";
 import { MAX_REFUND_BATCH, type BatchOrder, type RefundBatch } from "@/features/organiser/domain/refund-batch";
+import type { RunSummary } from "@/features/organiser/domain/refund-run";
 import { EVENTS, questionWith } from "@/features/organiser/testing/answer-fixtures";
 import { RefundBatchView } from "./refund-batch";
 
@@ -28,6 +29,16 @@ const batchOf = (count: number, fields: Partial<RefundBatch> = {}): RefundBatch 
   ...fields,
 });
 const question = questionWith({ intent: "refund-orders", event: "night-market-jazz", refundReason: "event_changed" });
+const finished = (fields: Partial<RunSummary>): RunSummary => ({
+  isRunning: false,
+  done: 0,
+  total: 0,
+  started: 0,
+  failed: [],
+  notAsked: [],
+  wasStopped: false,
+  ...fields,
+});
 
 /**
  * A request to refund, answered (ADR 027): what would be refunded, said before anything
@@ -41,10 +52,11 @@ const meta = {
     batch: batchOf(3),
     question,
     events: OWNER_EVENTS,
-    state: { status: "idle" },
+    run: null,
     onConfirm: fn(),
     onStop: fn(),
     onRetry: fn(),
+    onRefundNotAsked: fn(),
   },
   parameters: { layout: "padded" },
 } satisfies Meta<typeof RefundBatchView>;
@@ -113,7 +125,7 @@ export const BoxOffice: Story = {
 
 /** Once started, the progress replaces what could be refunded, which falls as the refunds land. */
 export const Refunding: Story = {
-  args: { batch: batchOf(23), state: { status: "running", total: 23, done: 12, failed: [] } },
+  args: { batch: batchOf(23), run: finished({ isRunning: true, total: 23, done: 12, started: 12 }) },
   play: async ({ args, canvas, userEvent }) => {
     await expect(canvas.getByText("Refunding: 12 of 23.")).toBeVisible();
     await expect(canvas.queryByText(/can be refunded/u)).toBeNull();
@@ -123,22 +135,19 @@ export const Refunding: Story = {
 };
 
 export const Started: Story = {
-  args: { batch: batchOf(23), state: { status: "finished", total: 23, started: 23, failed: [], wasStopped: false } },
+  args: { batch: batchOf(23), run: finished({ started: 23 }) },
 };
 
 export const SomeFailed: Story = {
   args: {
     batch: batchOf(23),
-    state: {
-      status: "finished",
-      total: 23,
+    run: finished({
       started: 21,
       failed: [
         { orderId: "ord_h11203", message: "The payment provider couldn’t start the refund." },
         { orderId: "ord_h11207", message: "This order has already been refunded." },
       ],
-      wasStopped: false,
-    },
+    }),
   },
   play: async ({ args, canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Retry the 2 that failed" }));
@@ -146,9 +155,21 @@ export const SomeFailed: Story = {
   },
 };
 
+/** Stopped part-way: every order the owner confirmed is accounted for, and the rest can be refunded still (DC-04). */
 export const Stopped: Story = {
-  args: { batch: batchOf(23), state: { status: "finished", total: 23, started: 8, failed: [], wasStopped: true } },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(/ Stopped, so the other 15 weren’t refunded\.$/u)).toBeVisible();
+  args: {
+    batch: batchOf(23),
+    run: finished({
+      started: 8,
+      notAsked: orders(23)
+        .slice(8)
+        .map((order) => order.id),
+      wasStopped: true,
+    }),
+  },
+  play: async ({ args, canvas, userEvent }) => {
+    await expect(canvas.getByText("Stopped: 15 weren’t asked for.")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Refund the 15" }));
+    await expect(args.onRefundNotAsked).toHaveBeenCalledWith("event_changed");
   },
 };

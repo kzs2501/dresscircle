@@ -421,6 +421,99 @@ test.describe("refunds the organiser confirms (ADR 027)", () => {
     expect(Object.values((await sandbox.state()).refunds)).toHaveLength(theirs);
   });
 
+  const confirm = async (page: Page) => {
+    await answers(page).getByRole("button", { name: "Review and refund…" }).click();
+    const dialog = page.getByRole("dialog", { name: `Refund ${String(count)} orders?` });
+    await dialog.getByRole("textbox", { name: `Type ${String(count)} to confirm` }).fill(String(count));
+    await dialog.getByRole("button", { name: `Refund ${String(count)} orders (${total})` }).click();
+  };
+  const nav = (page: Page) => page.getByRole("navigation", { name: "Organisers" });
+  const strip = (page: Page) => page.getByRole("region", { name: "Refunds" });
+
+  test("a batch carries on while the organiser looks at another page, and the overview still has it (DC-03)", async ({
+    page,
+    organiser,
+    sandbox,
+  }) => {
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, REQUEST);
+    await confirm(page);
+    await nav(page).getByRole("link", { name: "Orders" }).click();
+    await expect(page).toHaveURL(/\/organiser\/orders/u);
+    await expect.poll(async () => Object.keys((await sandbox.state()).refunds).length).toBe(count);
+    await nav(page).getByRole("link", { name: "Overview" }).click();
+    await expect(
+      answers(page).getByText(new RegExp(`^Refunds started for ${String(count)} orders\\.`, "u")),
+    ).toBeVisible();
+  });
+
+  test.describe("on a slow network", () => {
+    test.setTimeout(90_000);
+
+    test("stopped part-way, the orders not asked for are listed, and refunding them starts each once (DC-04)", async ({
+      page,
+      organiser,
+      sandbox,
+    }) => {
+      await organiser.signInAs(/Nandini Rao/);
+      await ask(page, REQUEST);
+      await answers(page).getByRole("button", { name: "Review and refund…" }).waitFor();
+      await sandbox.choosePreset("Slow network");
+      await confirm(page);
+      // On every page of the dashboard, with Stop; the overview's own Stop is the same.
+      await expect(strip(page).getByText(/^Refunding Night Market Jazz: \d+ of \d+\./u)).toBeVisible();
+      await answers(page).getByRole("button", { name: "Stop" }).click();
+      const notAsked = count - 4;
+      await expect(answers(page).getByText(`Stopped: ${String(notAsked)} weren’t asked for.`)).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(answers(page).getByText(/^Refunds started for 4 orders\./u)).toBeVisible();
+      await expect(
+        strip(page).getByText(new RegExp(`Stopped: ${String(notAsked)} weren’t asked for\\.`, "u")),
+      ).toBeVisible();
+
+      await sandbox.choosePreset("Happy path");
+      await answers(page)
+        .getByRole("button", { name: `Refund the ${String(notAsked)}` })
+        .click();
+      await expect(
+        answers(page).getByText(new RegExp(`^Refunds started for ${String(count)} orders\\.`, "u")),
+      ).toBeVisible({ timeout: 15_000 });
+      const refunds = Object.values((await sandbox.state()).refunds);
+      expect(refunds).toHaveLength(count);
+      expect(new Set(refunds.map((entry) => entry.orderId)).size).toBe(count);
+      await expect(strip(page)).toHaveCount(0);
+    });
+
+    test("signing out waits while refunds run, and says why", async ({ page, organiser, sandbox }) => {
+      await organiser.signInAs(/Nandini Rao/);
+      await ask(page, REQUEST);
+      await answers(page).getByRole("button", { name: "Review and refund…" }).waitFor();
+      await sandbox.choosePreset("Slow network");
+      await confirm(page);
+      const signOut = page.getByRole("button", { name: "Sign out" });
+      await expect(signOut).toBeDisabled();
+      await expect(signOut).toHaveAccessibleDescription("Stop the refunds first.");
+      await signOut.press("Enter");
+      await expect(page).toHaveURL(/\/organiser$/u);
+      await strip(page).getByRole("button", { name: "Stop" }).click();
+      await expect(signOut).toBeEnabled({ timeout: 15_000 });
+    });
+
+    for (const scheme of ["light", "dark"] as const) {
+      test(`no axe violations with a batch running (${scheme})`, async ({ page, organiser, sandbox }) => {
+        await page.emulateMedia({ colorScheme: scheme });
+        await organiser.signInAs(/Nandini Rao/);
+        await ask(page, REQUEST);
+        await answers(page).getByRole("button", { name: "Review and refund…" }).waitFor();
+        await sandbox.choosePreset("Slow network");
+        await confirm(page);
+        await expect(strip(page)).toBeVisible();
+        expect(await axeViolations(page)).toEqual([]);
+      });
+    }
+  });
+
   for (const scheme of ["light", "dark"] as const) {
     test(`no axe violations in the review dialog (${scheme})`, async ({ page, organiser }) => {
       await page.emulateMedia({ colorScheme: scheme });

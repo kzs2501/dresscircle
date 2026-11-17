@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { planWithEngines } from "@/lib/ai/plan";
 import { EVENTS, questionWith } from "@/features/organiser/testing/answer-fixtures";
+import { AskedQuestionsProvider } from "./use-asked-questions";
 import { MAX_ASKED, useOrganiserQuestion } from "./use-organiser-question";
 
 vi.mock("@/lib/ai/plan", () => ({ planWithEngines: vi.fn() }));
@@ -17,7 +18,8 @@ afterEach(() => {
   plan.mockReset();
 });
 
-const setup = (shownEvent: string | null = null) => renderHook(() => useOrganiserQuestion(EVENTS, shownEvent));
+const setup = (shownEvent: string | null = null) =>
+  renderHook(() => useOrganiserQuestion(EVENTS, shownEvent), { wrapper: AskedQuestionsProvider });
 
 describe("asking about your sales", () => {
   it("reads what the rules can place without an engine", async () => {
