@@ -249,7 +249,13 @@ export function Discovery({ events, children }: { events: readonly EventCardData
         }, TYPED_URL_DELAY_MS);
       }}
       onRequest={(request) => {
-        cancelTypedWrite();
+        // Typing that hasn't reached the URL yet does now, so Back from what Enter finds
+        // returns to it (DC-17). Natively, so it lands before the push below whatever the
+        // router is doing; Next keeps useSearchParams in step with history calls.
+        if (typedWrite.current !== null) {
+          cancelTypedWrite();
+          window.history.replaceState(null, "", routes.home(eventFilterParams({ ...filters, q: request.trim() })));
+        }
         void interpret(request).then((next) => {
           if (!next) return;
           setQuery(next.q ?? "");

@@ -70,8 +70,7 @@ test.describe("a search in your own words (ADR 025)", () => {
       });
       await page.goto("/");
       await searchBox(page).fill("stand-up in Delhi");
-      // Typing searches as it goes; Enter comes once that's in the URL, as after a person's pause.
-      await expect(page).toHaveURL(/\?q=stand-up\+in\+Delhi$/);
+      // Enter at once, before typing's own write to the URL: Back still returns to it (DC-17).
       await searchBox(page).press("Enter");
 
       await expect(page).toHaveURL(/\?cat=comedy&city=Delhi$/);
