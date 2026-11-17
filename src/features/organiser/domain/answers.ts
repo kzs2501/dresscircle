@@ -176,13 +176,16 @@ export function answerFor(
   if (hasPeriod) notes.push(PERIOD_NOTE);
 
   if (question.intent === "summary") {
-    const { tickets, revenue, paidOrders, currency } = metrics;
+    const { tickets, revenue, paidOrders, refundedOrders, currency } = metrics;
+    // Paid orders count every order ever paid; saying how many were refunded since keeps
+    // this in step with a count of orders paid now (DC-07).
+    const refunded = refundedOrders > 0 ? `, ${formatCount(refundedOrders)} of them since refunded` : "";
     const subject = eventName ? `${eventName} has` : "Across your events, you’ve";
     return {
       sentence: `${subject} sold ${formatCount(tickets.sold)} of ${formatCount(tickets.capacity)} tickets (${formatPercent(
         tickets.sold,
         tickets.capacity,
-      )}): ${formatMoney(revenue.netMinor, currency)} net from ${formatCount(paidOrders)} paid ${paidOrders === 1 ? "order" : "orders"}.`,
+      )}): ${formatMoney(revenue.netMinor, currency)} net from ${formatCount(paidOrders)} paid ${paidOrders === 1 ? "order" : "orders"}${refunded}.`,
       visual: { kind: "none" },
       source: dashboard,
       notes,

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CHAOS } from "@/backend/chaos/presets";
+import { DEFAULT_ORDER_BY } from "@/contract/queries";
 import { createTestBackend, purchase, START_MS, valueOf } from "@/backend/testing/fixtures";
 import { findAccount, type Account } from "@/core/organisations";
 import { percentile } from "./metrics";
@@ -29,6 +30,17 @@ describe("sales metrics", () => {
     for (const tier of metrics.tiers)
       expect(tier.sold, tier.tierId).toBe(tier.capacity - backend.available(tier.tierId));
     expect(metrics.tickets.sold).toBe(8_400 + 4_550 + 360);
+  });
+
+  it("counts the paid orders since refunded, so paid less refunded is what's paid now (DC-07)", () => {
+    const { backend } = createTestBackend();
+    const owner = account("acc-lakeside-owner");
+    const { paidOrders, refundedOrders } = valueOf(backend.salesMetrics(owner));
+    const count = (status: ("paid" | "fulfilled" | "refunded")[]) =>
+      valueOf(backend.listOrders(owner, { status, orderBy: DEFAULT_ORDER_BY, pageSize: 1 })).totalSize;
+    expect(refundedOrders).toBe(count(["refunded"]));
+    expect(refundedOrders).toBeGreaterThan(0);
+    expect(paidOrders - refundedOrders).toBe(count(["paid", "fulfilled"]));
   });
 
   it("splits sales into the organisation's calendar days, quiet ones included, up to today", () => {

@@ -11,7 +11,8 @@ const answer = (fields: Partial<OrganiserQuestion>, data: Partial<Parameters<typ
 describe("answers from the dashboard's own numbers", () => {
   it("sums up an event's sales, and links to its dashboard", () => {
     expect(answer({ event: "night-market-jazz" })).toEqual({
-      sentence: "Night Market Jazz has sold 412 of 600 tickets (69%): ₹3,80,000.00 net from 380 paid orders.",
+      sentence:
+        "Night Market Jazz has sold 412 of 600 tickets (69%): ₹3,80,000.00 net from 380 paid orders, 12 of them since refunded.",
       visual: { kind: "none" },
       source: { kind: "dashboard", eventSlug: "night-market-jazz" },
       notes: [],
@@ -131,6 +132,7 @@ describe("answers from the dashboard's own numbers", () => {
     const one = {
       ...METRICS,
       paidOrders: 1,
+      refundedOrders: 0,
       salesByDay: [{ date: "2026-11-13", tickets: 1, revenueMinor: 50_000 }],
       paymentMethods: [{ method: "upi" as const, orders: 1 }],
     };

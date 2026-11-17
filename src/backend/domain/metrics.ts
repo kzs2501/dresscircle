@@ -26,6 +26,8 @@ export interface SalesMetrics {
   tickets: { sold: number; capacity: number };
   tiers: { eventSlug: string; eventName: string; tierId: string; tierName: string; sold: number; capacity: number }[];
   paidOrders: number;
+  /** How many of the paid orders have since been refunded. */
+  refundedOrders: number;
   averageOrderMinor: number;
   /**
    * One entry per calendar day in the organisation's zone, oldest first, quiet days
@@ -135,6 +137,7 @@ export function salesMetrics(context: BackendContext, account: Account, eventSlu
     },
     tiers,
     paidOrders: paid.length,
+    refundedOrders: paid.filter((row) => row.status === "refunded").length,
     averageOrderMinor: paid.length ? Math.round(grossMinor / paid.length) : 0,
     salesByDay,
     funnel: {

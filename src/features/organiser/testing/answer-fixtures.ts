@@ -39,6 +39,7 @@ export const METRICS: SalesMetricsDto = {
     },
   ],
   paidOrders: 380,
+  refundedOrders: 12,
   averageOrderMinor: 105_263,
   salesByDay: [
     { date: "2026-11-07", tickets: 10, revenueMinor: 1_000_000 },

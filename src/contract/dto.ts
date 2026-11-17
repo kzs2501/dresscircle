@@ -352,7 +352,10 @@ export const salesMetricsDtoSchema = z.object({
       capacity: z.number().int().nonnegative(),
     }),
   ),
+  /** Every order ever paid for, refunded ones included. */
   paidOrders: z.number().int().nonnegative(),
+  /** How many of those have since been refunded. */
+  refundedOrders: z.number().int().nonnegative(),
   averageOrderMinor: minorUnitsSchema,
   salesByDay: z.array(
     z.object({ date: z.iso.date(), tickets: z.number().int().nonnegative(), revenueMinor: minorUnitsSchema }),
