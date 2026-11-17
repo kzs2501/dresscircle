@@ -51,8 +51,15 @@ first Enter, so the home page's first load carries none of it.
 
 **`/ai/plan` isn't a way to reach a model.** It takes a task's name and up to 200
 characters of text; the server builds the task itself, from the catalogue and its own
-clock, and answers only with what passed the schema. Each client may ask 10 times a minute
-and 60 an hour. No key, a spent quota, a slow or malformed answer are all one problem,
+clock, and answers only with what passed the schema. Only the site's own pages may ask: a
+JSON body of 2 KB at most, from this origin. A page on another site could otherwise make
+each of its visitors' browsers spend the free quota, from as many addresses as it has
+visitors (found in the November bug hunt), since a browser sends plain text or a form
+across sites without asking first; JSON makes it ask, and the route never agrees. Each
+client may ask 10 times a minute and 60 an hour, counted in the instance's memory: a few
+warm instances each count their own, so Groq's daily quota is the real ceiling. A crowd of
+new clients can't make it forget one it's holding back. No key, a spent quota, a slow or
+malformed answer are all one problem,
 `503 ai_unavailable` with `Retry-After`, after which the tab stops asking for that long.
 It's outside `/api/*`, so the sandbox's service worker lets it through to the server.
 

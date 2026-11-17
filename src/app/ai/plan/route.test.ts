@@ -173,3 +173,66 @@ describe("POST /ai/plan", () => {
     expect(JSON.stringify(await response.json())).not.toContain(KEY);
   });
 });
+
+describe("only this site's own pages may ask (DC-01)", () => {
+  const SEARCH = JSON.stringify({ task: "event-search", text: "jazz by the sea" });
+  const from = (headers: Record<string, string>, body: BodyInit = SEARCH) =>
+    POST(
+      new Request("https://dresscircle.test/ai/plan", {
+        method: "POST",
+        headers: { "x-forwarded-for": `198.51.100.${String(++address)}`, ...headers },
+        body,
+        duplex: "half",
+      } as RequestInit),
+    );
+
+  it.each([
+    [
+      "a plain-text body, which a page on another site can send without asking first",
+      { "Content-Type": "text/plain" },
+      422,
+    ],
+    ["a form's body, which another site can send too", { "Content-Type": "application/x-www-form-urlencoded" }, 422],
+    [
+      "a request from a page on another site",
+      { "Content-Type": "application/json", "Sec-Fetch-Site": "cross-site" },
+      403,
+    ],
+    ["a request from a sibling site", { "Content-Type": "application/json", "Sec-Fetch-Site": "same-site" }, 403],
+    ["a request naming another origin", { "Content-Type": "application/json", Origin: "https://evil.example" }, 403],
+  ])("refuses %s, and never asks the model", async (_, headers, status) => {
+    const fetch = groqAnswers(GOOD);
+    vi.stubGlobal("fetch", fetch);
+    const response = await from(headers);
+    expect(response.status).toBe(status);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("answers the site's own pages, which say where they're from", async () => {
+    vi.stubGlobal("fetch", groqAnswers(GOOD));
+    const response = await from({
+      "Content-Type": "application/json; charset=utf-8",
+      Origin: "https://dresscircle.test",
+      "Sec-Fetch-Site": "same-origin",
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("stops reading a body once it's past 2 KB, and refuses it", async () => {
+    const fetch = groqAnswers(GOOD);
+    vi.stubGlobal("fetch", fetch);
+    let sent = 0;
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        sent += 1024;
+        controller.enqueue(new Uint8Array(1024).fill(97));
+        if (sent >= 5_000_000) controller.close();
+      },
+    });
+    const response = await from({ "Content-Type": "application/json" }, endless);
+    expect(response.status).toBe(413);
+    expect(sent).toBeLessThan(16 * 1024);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});

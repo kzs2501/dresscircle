@@ -5,10 +5,12 @@
  *
  * It isn't a way to reach a model for free: the server builds the task itself, from the
  * catalogue and its own clock, so a caller can send nothing but the text, and gets back
- * nothing but an answer that passed the task's schema. Each client may ask 10 times a
- * minute and 60 an hour, counted in this instance's memory; Groq's daily quota is the
- * real ceiling. Whatever goes wrong is one problem, `ai_unavailable`, and the page
- * answers without AI.
+ * nothing but an answer that passed the task's schema. Only the site's own pages may ask:
+ * a JSON body, from this origin, so a page on another site can't make its visitors spend
+ * the free quota everyone shares. Each client may ask 10 times a minute and 60 an hour,
+ * counted in this instance's memory (several instances each count their own); Groq's
+ * daily quota is the real ceiling. Whatever goes wrong upstream is one problem,
+ * `ai_unavailable`, and the page answers without AI.
  */
 import { clientIpHeaderFrom, clientKeyOf } from "@/core/client-key";
 import { createSlidingWindowStore, type RateLimit } from "@/core/sliding-window";
@@ -39,7 +41,7 @@ const bodySchema = z.strictObject({
 
 function problem(
   request: Request,
-  code: Extract<ProblemCode, "ai_unavailable" | "invalid_request">,
+  code: Extract<ProblemCode, "ai_unavailable" | "invalid_request" | "forbidden" | "payload_too_large">,
   detail: string,
   retryAfterSeconds?: number,
 ) {
@@ -57,6 +59,51 @@ function problem(
   );
 }
 
+/**
+ * Whether the request comes from one of this site's own pages. A browser says where a
+ * request comes from (`Sec-Fetch-Site`, `Origin`) and a page can't change it; a request
+ * that says nothing isn't from a browser, and meets the per-client limits like any other.
+ */
+function isFromThisSite(request: Request) {
+  const site = request.headers.get("sec-fetch-site");
+  if (site !== null && site !== "same-origin") return false;
+  const origin = request.headers.get("origin");
+  return origin === null || origin === new URL(request.url).origin;
+}
+
+/**
+ * A JSON body. A page on another site can send plain text or a form without asking the
+ * browser first; JSON makes the browser ask, and this route never says yes.
+ */
+const isJson = (request: Request) =>
+  (request.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() === "application/json";
+
+/** The body as text, or null once it passes `limit` bytes: a large body is never read whole. */
+async function readUpTo(request: Request, limit: number): Promise<string | null> {
+  if (Number(request.headers.get("content-length")) > limit) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done: isDone, value } = await reader.read();
+    if (isDone) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(size);
+  let at = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return new TextDecoder().decode(body);
+}
+
 /** Why a request failed, for the log: never the request's text, nor anything the model wrote. */
 const describeFailure = (error: unknown) =>
   error instanceof GroqError
@@ -72,11 +119,15 @@ function cloudModel() {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  if (!isFromThisSite(request)) {
+    return problem(request, "forbidden", "Only this site’s own pages may ask the AI.");
+  }
+  if (!isJson(request)) return problem(request, "invalid_request", "Send the request as JSON.");
+  const raw = await readUpTo(request, MAX_BODY_BYTES);
+  if (raw === null) return problem(request, "payload_too_large", "The request is over 2 KB.");
+
   const apiKey = process.env["GROQ_API_KEY"];
   if (!apiKey) return problem(request, "ai_unavailable", "No AI key is set up here.", 3_600);
-
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return problem(request, "invalid_request", "The request is too long.");
   let parsed: z.ZodSafeParseResult<z.infer<typeof bodySchema>>;
   try {
     parsed = bodySchema.safeParse(JSON.parse(raw));
