@@ -34,7 +34,9 @@ worked out from today ("yesterday", "last week", "the past 30 days", "in October
 latest one, since sales are history), and the account's events by the words of their
 names. They read 28 of the 30 eval cases exactly right. When they can't place every word,
 an engine reads the whole question, but where the rules found a period, a status, a method
-or a buyer, theirs is kept: the free model took "this week" for the last seven days.
+or a buyer, theirs is kept: the free model took "this week" for the last seven days. A
+question asked while another is still being read replaces it, and the earlier one's
+answer, if it comes, is dropped; Ask is never held busy.
 
 **Access is the API's, as before.** In the browser, an engine is offered only the signed-in
 account's events, so an answer naming someone else's can't pass the schema, and the rules'

@@ -336,9 +336,8 @@ export function Assistant({
           }}
           className="min-h-11 min-w-0 flex-1 rounded-lg border border-line bg-paper px-4 text-base placeholder:text-ink-3"
         />
-        <Button type="submit" isBusy={pending !== null}>
-          Ask
-        </Button>
+        {/* Not busy while a question is read: asking again replaces it, as the line below says (DC-16). */}
+        <Button type="submit">Ask</Button>
       </form>
       <div role="group" aria-label="Suggested questions" className="flex flex-wrap gap-2">
         {SUGGESTIONS.map((suggestion) => (

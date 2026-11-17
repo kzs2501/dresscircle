@@ -319,6 +319,20 @@ test.describe("asking about your sales (ADR 026)", () => {
     await expect(panel(page).getByRole("button", { name: "Ask" })).not.toHaveAttribute("aria-busy", "true");
   });
 
+  test("asking again while an answer is on its way replaces it (DC-16)", async ({ page, organiser }) => {
+    // The cloud never answers, so the first question is still being read when the second comes.
+    await page.route("**/ai/plan", () => new Promise<void>(() => undefined));
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, "which shows are doing well?");
+    await expect(panel(page).getByText("Reading “which shows are doing well?”…")).toBeVisible();
+    await ask(page, "which tickets are doing well?");
+    await expect(panel(page).getByText("Reading “which tickets are doing well?”…")).toBeVisible();
+    // Once the cloud is given up on, the rules' reading of the second is the only answer.
+    await expect(answers(page).getByRole("heading", { level: 3 })).toHaveText(["“which tickets are doing well?”"], {
+      timeout: 10_000,
+    });
+  });
+
   test("the box office may ask too: it only reads", async ({ page, organiser }) => {
     await organiser.signInAs(/Arjun Mehta/);
     await panel(page).getByRole("button", { name: "From reservation to payment" }).click();
