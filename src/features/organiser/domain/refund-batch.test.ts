@@ -7,6 +7,7 @@ import {
   describeBatch,
   MAX_REFUND_BATCH,
   needsTypingToConfirm,
+  refundableEventsOf,
   refundCandidatesFilter,
 } from "./refund-batch";
 
@@ -145,5 +146,28 @@ describe("the orders a refund would cover", () => {
     ).toBe(
       "That’s more than 500 orders, 9 Nov 2026: too many at once. Narrow it down by event, date or payment method.",
     );
+  });
+
+  it("drops “by event” from the advice when the request already names one (DC-10)", () => {
+    const tooMany = batchFrom([row()], EVENTS, { hasMore: true });
+    expect(describeBatch(tooMany, { from: null, to: null }, "Deccan Nights").sentence).toBe(
+      "That’s more than 500 orders for Deccan Nights: too many at once. Narrow it down by date or payment method.",
+    );
+  });
+
+  it("lists and totals an order once, even if the API returned it twice (DC-13)", () => {
+    const once = row();
+    const batch = batchFrom([once, { ...once }, row({ totalMinor: 400_000 })], EVENTS, { hasMore: false });
+    expect(batch.orders.map((order) => order.id)).toEqual([once.id, expect.any(String)]);
+    expect(batch.totalMinor).toBe(1_200_000);
+    const refunding = row({ refundStatus: "pending" });
+    expect(batchFrom([refunding, refunding], EVENTS, { hasMore: false }).alreadyRefunding).toBe(1);
+  });
+
+  it("knows which events this account may refund, in a stable order", () => {
+    expect(refundableEventsOf([event("b-event", true), event("c-event", false), event("a-event", true)])).toEqual([
+      "a-event",
+      "b-event",
+    ]);
   });
 });

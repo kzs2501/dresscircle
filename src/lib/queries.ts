@@ -124,16 +124,29 @@ export const organiserQueries = {
       queryKey: [...organiserQueries.ordersAll(), "count", writeOrderSearchParams(filters).toString()],
       queryFn: () => organiserApi.countOrders(filters),
     }),
-  /** The orders a refund batch could cover, under the orders' key: kept current by the live stream until the dialog freezes them. */
-  refundCandidates: (filters: OrderFilters, maxRows: number) =>
+  /**
+   * The orders a refund batch could cover, under the orders' key: kept current by the live
+   * stream until the dialog freezes them. Only orders the batch would hold count towards
+   * `maxRows` (as `batchFrom` decides: fulfilled, not refunding, of an event in
+   * `refundableEvents`).
+   */
+  refundCandidates: (filters: OrderFilters, maxRows: number, refundableEvents: readonly string[]) =>
     queryOptions({
       queryKey: [
         ...organiserQueries.ordersAll(),
         "refund-candidates",
         writeOrderSearchParams(filters).toString(),
         maxRows,
+        refundableEvents.join(","),
       ],
-      queryFn: () => organiserApi.listOrdersUpTo(filters, maxRows),
+      queryFn: () => {
+        const refundable = new Set(refundableEvents);
+        return organiserApi.listOrdersUpTo(
+          filters,
+          maxRows,
+          (row) => row.status === "fulfilled" && row.refundStatus === null && refundable.has(row.eventSlug),
+        );
+      },
     }),
   orderAll: () => [...organiserQueries.all(), "order"] as const,
   order: (orderId: string) =>

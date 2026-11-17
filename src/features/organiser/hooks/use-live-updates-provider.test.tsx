@@ -27,10 +27,9 @@ afterEach(() => {
 const listKey = organiserQueries.orders({ status: [], orderBy: DEFAULT_ORDER_BY }).queryKey;
 const metricsKey = organiserQueries.metrics().queryKey;
 const countKey = organiserQueries.orderCount({ status: ["paid"], orderBy: DEFAULT_ORDER_BY }).queryKey;
-const candidatesKey = organiserQueries.refundCandidates(
-  { status: ["fulfilled"], orderBy: DEFAULT_ORDER_BY },
-  500,
-).queryKey;
+const candidatesKey = organiserQueries.refundCandidates({ status: ["fulfilled"], orderBy: DEFAULT_ORDER_BY }, 500, [
+  "night-market-jazz",
+]).queryKey;
 
 function setup() {
   vi.spyOn(Math, "random").mockReturnValue(0); // reconnect at once

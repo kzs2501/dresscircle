@@ -45,15 +45,25 @@ export const refundCandidatesFilter = (question: OrganiserQuestion): OrderFilter
   status: ["fulfilled"],
 });
 
+/**
+ * The events this account may refund, sorted, so the same account always asks for its
+ * candidates the same way (they're part of the query's key).
+ */
+export const refundableEventsOf = (events: readonly OrganiserEventDto[]): string[] =>
+  events
+    .filter((event) => event.permissions.includes("orders:refund"))
+    .map((event) => event.slug)
+    .sort();
+
 export function batchFrom(
   rows: readonly OrderRowDto[],
   events: readonly OrganiserEventDto[],
   { hasMore }: { hasMore: boolean },
 ): RefundBatch {
-  const refundable = new Set(
-    events.filter((event) => event.permissions.includes("orders:refund")).map((event) => event.slug),
-  );
-  const fulfilled = rows.filter((row) => row.status === "fulfilled");
+  const refundable = new Set(refundableEventsOf(events));
+  // An order the API returned twice (pages shifting under a live sale) is listed and totalled once (DC-13).
+  const unique = [...new Map(rows.map((row) => [row.id, row])).values()];
+  const fulfilled = unique.filter((row) => row.status === "fulfilled");
   const alreadyRefunding = fulfilled.filter((row) => row.refundStatus !== null).length;
   const notAllowed = fulfilled.filter((row) => row.refundStatus === null && !refundable.has(row.eventSlug)).length;
   const orders = fulfilled
@@ -99,8 +109,10 @@ export function describeBatch(
       : []),
   ];
   if (batch.isTooMany) {
+    // A request that names its event is already narrowed by event (DC-10).
+    const narrowBy = eventName ? "date or payment method" : "event, date or payment method";
     return {
-      sentence: `That’s more than ${formatCount(MAX_REFUND_BATCH)} orders${scope}: too many at once. Narrow it down by event, date or payment method.`,
+      sentence: `That’s more than ${formatCount(MAX_REFUND_BATCH)} orders${scope}: too many at once. Narrow it down by ${narrowBy}.`,
       notes,
     };
   }

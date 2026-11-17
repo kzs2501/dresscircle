@@ -20,6 +20,7 @@ import {
   describeBatch,
   MAX_REFUND_BATCH,
   needsTypingToConfirm,
+  refundableEventsOf,
   refundCandidatesFilter,
   type BatchOrder,
   type RefundBatch,
@@ -326,7 +327,9 @@ export function RefundBatchView({
 /** A request to refund, with the orders it covers read live; the batch runs in the dashboard's shell. */
 export function RefundBatchAnswer({ asked, events }: { asked: Asked; events: readonly OrganiserEventDto[] }) {
   const { question } = asked;
-  const candidates = useQuery(organiserQueries.refundCandidates(refundCandidatesFilter(question), MAX_REFUND_BATCH));
+  const candidates = useQuery(
+    organiserQueries.refundCandidates(refundCandidatesFilter(question), MAX_REFUND_BATCH, refundableEventsOf(events)),
+  );
   const { runs, start, refund, stop } = useRefundRuns();
   const run = runs[asked.id];
   const summary = run ? summaryOf(run) : null;
@@ -372,7 +375,9 @@ export function RefundBatchSentence({
   question: OrganiserQuestion;
   events: readonly OrganiserEventDto[];
 }) {
-  const candidates = useQuery(organiserQueries.refundCandidates(refundCandidatesFilter(question), MAX_REFUND_BATCH));
+  const candidates = useQuery(
+    organiserQueries.refundCandidates(refundCandidatesFilter(question), MAX_REFUND_BATCH, refundableEventsOf(events)),
+  );
   const [said, setSaid] = useState<string | null>(null);
   if (said === null && candidates.data) {
     const batch = batchFrom(candidates.data.rows, events, { hasMore: candidates.data.hasMore });

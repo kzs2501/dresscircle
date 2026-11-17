@@ -38,6 +38,9 @@ async function asOrganiser<T>(call: (headers: Record<string, string>) => Promise
 
 const withQuery = (path: string, params: URLSearchParams) => (params.size ? `${path}?${params.toString()}` : path);
 
+/** The most pages a refund batch's reading takes: 2,000 orders, at 100 a page. */
+export const MAX_PAGES_READ = 20;
+
 export const organiserApi = {
   signIn: (accountId: string) => post(buildApiPath(API_ROUTES.session, {}), sessionDtoSchema, { accountId }),
   signOut: () =>
@@ -85,17 +88,28 @@ export const organiserApi = {
       ),
     ).then((page) => page.totalSize),
   /**
-   * Every order a refund batch could cover, page by page, stopping past the most a batch
-   * may hold (`maxRows`): `hasMore` says there were more than were read.
+   * Every order a refund batch could cover, page by page, stopping once more than a batch
+   * may hold (`maxRows`) would count: orders the batch leaves out (already refunding, or
+   * of an event this account can't refund) don't use up the allowance (DC-11). Never more
+   * than `MAX_PAGES_READ` pages, however few count. `hasMore` says there were more than
+   * were read.
    */
-  listOrdersUpTo: async (filters: OrderFilters, maxRows: number) => {
+  listOrdersUpTo: async (
+    filters: OrderFilters,
+    maxRows: number,
+    counts: (row: OrderPageDto["orders"][number]) => boolean = () => true,
+  ) => {
     const rows: OrderPageDto["orders"] = [];
+    let counted = 0;
+    let pages = 0;
     let pageToken: string | undefined;
     do {
       const page = await organiserApi.listOrders(filters, pageToken);
       rows.push(...page.orders);
+      counted += page.orders.filter(counts).length;
+      pages += 1;
       pageToken = page.nextPageToken ?? undefined;
-    } while (pageToken !== undefined && rows.length <= maxRows);
+    } while (pageToken !== undefined && counted <= maxRows && pages < MAX_PAGES_READ);
     return { rows, hasMore: pageToken !== undefined };
   },
   getOrder: (orderId: string) =>

@@ -19,11 +19,14 @@ from the API's own list. Nothing in the form refunds anything, whoever read the 
 the rules, Chrome's model or the cloud's.
 
 **The answer is what would happen, said before it does.** The page asks the orders API for
-the request's orders, fulfilled ones only (the only ones a refund can start for), reading
-page after page up to 500, and says how many and how much, leaving out and counting
-orders already refunding and orders of events the account may not refund. Past 500 it
-says to narrow it down. The box office, which may read but not refund, is told only an
-owner can.
+the request's orders, fulfilled ones only (the only ones a refund can start for), and says
+how many and how much, leaving out and counting orders already refunding and orders of
+events the account may not refund. It reads page after page until it has more than 500
+it could refund, so the ones it leaves out don't use up the allowance, and never more
+than 20 pages (2,000 orders). Past 500 it says to narrow it down, by date or payment
+method when the request already named its event. An order a shifting page returns twice
+is counted once. The box office, which may read but not refund, is told only an owner
+can.
 
 **A review, always, and the number typed from 20 orders.** The owner opens a native dialog
 (focus kept inside, Escape closes, focus goes back) that lists the orders, says the total
