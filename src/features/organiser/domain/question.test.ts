@@ -103,6 +103,49 @@ describe("reading an organiser's question", () => {
   });
 });
 
+describe("the shapes of words the rules must read exactly (T-01)", () => {
+  const named = (name: string) => ({ slug: "the-event", name, city: "Goa", startsAt: "2027-01-16T19:00:00+05:30" });
+  const eventOf = (text: string, name: string) => readQuestion(text, [named(name)], TODAY).question.event;
+
+  it("matches a name with accents or apostrophes however they're typed", () => {
+    expect(eventOf("how is Café Mondégar doing", "Café Mondégar")).toBe("the-event");
+    expect(eventOf("how is cafe mondegar doing", "Café Mondégar")).toBe("the-event");
+    expect(eventOf("sales for Rangmanch’s Monsoon", "Rangmanch's Monsoon")).toBe("the-event");
+    expect(eventOf("sales for rangmanch's", "Rangmanch’s Monsoon")).toBe("the-event");
+  });
+
+  it("needs a word of more than three letters to tell an event by", () => {
+    expect(eventOf("joy sales", "Ode to Joy")).toBeNull();
+    expect(eventOf("jazz sales", "Jazz at the Fort")).toBe("the-event");
+    expect(eventOf("forts sales", "Jazz at the Fort")).toBe("the-event");
+  });
+
+  it("never tells an event by a word many names share, but places it once the event is told", () => {
+    for (const word of ["Nights", "Live", "Open", "Festival", "Late"]) {
+      expect(eventOf(`sales for the ${word.toLowerCase()}`, `Lantern ${word}`)).toBeNull();
+    }
+    expect(read("sales for the night market jazz")).toMatchObject({ unknownWords: [] });
+  });
+
+  it("reads a number of days however it's spaced, and never fewer than one", () => {
+    expect(asked("sales in the last  7  days")).toMatchObject({ from: "2026-11-07", to: "2026-11-13" });
+    expect(asked("sales over the past\t30 days")).toMatchObject({ from: "2026-10-15", to: "2026-11-13" });
+    expect(asked("sales over the previous 1 day")).toMatchObject({ from: "2026-11-13", to: "2026-11-13" });
+    expect(asked("sales in the last 0 days")).toMatchObject({ from: "2026-11-13", to: "2026-11-13" });
+  });
+
+  it("takes a buyer's email whole, whatever its shape", () => {
+    expect(asked("orders from priya.shah+tickets@mail.example.co.in")).toMatchObject({
+      search: "priya.shah+tickets@mail.example.co.in",
+    });
+    expect(asked("orders from Dev_Patel@Example.com today")).toMatchObject({
+      search: "dev_patel@example.com",
+      from: "2026-11-13",
+    });
+    expect(asked("orders from priya@localhost")).toMatchObject({ search: null });
+  });
+});
+
 describe("an engine's reading with the rules' on top", () => {
   const engine = {
     intent: "find-orders" as const,

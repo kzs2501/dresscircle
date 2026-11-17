@@ -170,4 +170,23 @@ describe("the orders a refund would cover", () => {
       "b-event",
     ]);
   });
+
+  it("says each kind of answer with its scope set off right, one order or many (T-01)", () => {
+    const one = batchFrom([row()], EVENTS, { hasMore: false });
+    expect(describeBatch(one, { from: "2026-11-09", to: "2026-11-09" }, "Night Market Jazz").sentence).toBe(
+      "1 order for Night Market Jazz, 9 Nov 2026, can be refunded: ₹8,000.00 in all.",
+    );
+    expect(describeBatch(one, { from: null, to: "2026-11-13" }, undefined).sentence).toBe(
+      "1 order, 13 Nov 2026, can be refunded: ₹8,000.00 in all.",
+    );
+    const none = batchFrom([], EVENTS, { hasMore: false });
+    expect(describeBatch(none, { from: null, to: null }, undefined)).toEqual({
+      sentence: "There are no orders that can be refunded.",
+      notes: [],
+    });
+    const tooMany = batchFrom([row()], EVENTS, { hasMore: true });
+    expect(describeBatch(tooMany, { from: "2026-11-01", to: "2026-11-30" }, "Deccan Nights").sentence).toBe(
+      "That’s more than 500 orders for Deccan Nights, 1 to 30 Nov 2026: too many at once. Narrow it down by date or payment method.",
+    );
+  });
 });
