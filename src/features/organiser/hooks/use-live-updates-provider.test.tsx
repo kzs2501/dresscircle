@@ -26,12 +26,19 @@ afterEach(() => {
 
 const listKey = organiserQueries.orders({ status: [], orderBy: DEFAULT_ORDER_BY }).queryKey;
 const metricsKey = organiserQueries.metrics().queryKey;
+const countKey = organiserQueries.orderCount({ status: ["paid"], orderBy: DEFAULT_ORDER_BY }).queryKey;
+const candidatesKey = organiserQueries.refundCandidates(
+  { status: ["fulfilled"], orderBy: DEFAULT_ORDER_BY },
+  500,
+).queryKey;
 
 function setup() {
   vi.spyOn(Math, "random").mockReturnValue(0); // reconnect at once
   const client = new QueryClient();
   client.setQueryData(listKey, { pages: [], pageParams: [] });
   client.setQueryData(metricsKey, {} as never);
+  client.setQueryData(countKey, 0);
+  client.setQueryData(candidatesKey, { rows: [], hasMore: false });
   const live: { current: ReturnType<typeof useLiveUpdates> | null } = { current: null };
   function Probe() {
     live.current = useLiveUpdates();
@@ -75,6 +82,38 @@ describe("LiveUpdatesProvider", () => {
     expect(isInvalidated(listKey)).toBe(false);
     expect(live.current?.changes.caughtUpAt).toBe(live.current?.changes.latest);
     expect(live.current?.changes.caughtUpAt).toBeGreaterThan(0);
+  });
+
+  it("keeps the assistant's answers about orders up to date, but never moves the table (DC-06)", async () => {
+    const { stream, isInvalidated } = setup();
+    const connection = await stream(0);
+    act(() => {
+      connection.open();
+    });
+    act(() => {
+      connection.send({ type: "ordersChanged", data: JSON.stringify({ eventSlugs: ["lakeside-lights"] }), id: null });
+    });
+    await waitFor(() => {
+      expect(isInvalidated(countKey)).toBe(true);
+    });
+    expect(isInvalidated(candidatesKey)).toBe(true);
+    expect(isInvalidated(listKey)).toBe(false);
+  });
+
+  it("brings the answers about orders up to date after a gap too", async () => {
+    const { stream, isInvalidated } = setup();
+    const first = await stream(0);
+    act(() => {
+      first.open();
+      first.drop();
+    });
+    const second = await stream(1);
+    act(() => {
+      second.open();
+    });
+    expect(isInvalidated(countKey)).toBe(true);
+    expect(isInvalidated(candidatesKey)).toBe(true);
+    expect(isInvalidated(listKey)).toBe(false);
   });
 
   it("skips a garbled event, and keeps listening", async () => {

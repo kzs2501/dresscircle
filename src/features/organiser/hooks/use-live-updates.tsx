@@ -19,7 +19,14 @@ const BACKOFF_BASE_MS = 1_000;
 const BACKOFF_CAP_MS = 30_000;
 
 const ORDERS_LISTS = organiserQueries.ordersAll();
-const isOrdersList = (queryKey: QueryKey) => ORDERS_LISTS.every((part, i) => queryKey[i] === part);
+/** Answers about orders the assistant keeps under the orders' key: a count, a refund batch's candidates. */
+const ORDER_ANSWERS = new Set(["count", "refund-candidates"]);
+/**
+ * The orders table's lists, which a change doesn't move (the table offers the latest rows
+ * instead). Answers kept under the same key aren't lists: they keep up (DC-06).
+ */
+const isOrdersList = (queryKey: QueryKey) =>
+  ORDERS_LISTS.every((part, i) => queryKey[i] === part) && !ORDER_ANSWERS.has(String(queryKey[ORDERS_LISTS.length]));
 
 const parseJson = (text: string): unknown => {
   try {
@@ -91,6 +98,10 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
       lastRefreshAt.current = Date.now();
       void queryClient.invalidateQueries({ queryKey: organiserQueries.metricsAll() });
       void queryClient.invalidateQueries({ queryKey: organiserQueries.orderAll() });
+      void queryClient.invalidateQueries({
+        queryKey: ORDERS_LISTS,
+        predicate: (query) => !isOrdersList(query.queryKey),
+      });
       const slugs = [...pending];
       pending.clear();
       setChanges(({ latest, byEvent, caughtUpAt }) => ({
