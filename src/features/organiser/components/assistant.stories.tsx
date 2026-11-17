@@ -97,4 +97,6 @@ export const NotAnswerable: Story = {
 
 export const WorkingItOut: Story = { args: { answer: null } };
 
-export const NumbersFailed: Story = { args: { answer: null, isFailed: true } };
+export const NumbersFailed: Story = {
+  args: { answer: null, failure: "Couldn’t load the numbers for this. Check your connection and ask again." },
+};

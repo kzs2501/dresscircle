@@ -56,6 +56,13 @@ describe("reading an organiser's question", () => {
     expect(read("sales last week", "2027-01-04").question).toMatchObject({ from: "2026-12-28", to: "2027-01-03" });
   });
 
+  it("keeps a month still to come whole, so a period never runs backwards (DC-05)", () => {
+    expect(asked("sales in December 2026")).toMatchObject({ from: "2026-12-01", to: "2026-12-31" });
+    expect(asked("refunds in March 2027")).toMatchObject({ from: "2027-03-01", to: "2027-03-31" });
+    // A month that's begun still ends today.
+    expect(asked("sales in November 2026")).toMatchObject({ from: "2026-11-01", to: "2026-11-13" });
+  });
+
   it("reads statuses and payment methods as the orders' filters", () => {
     expect(asked("refunded UPI orders last week")).toMatchObject({
       intent: "find-orders",

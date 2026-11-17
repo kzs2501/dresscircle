@@ -44,7 +44,10 @@ export function useOrganiserQuestion(events: readonly OrganiserEventDto[], shown
       controller.current?.abort();
       const today = todayInIndia(Date.now());
       const reading = readQuestion(text, events, today);
-      if (reading.hasIntent && reading.unknownWords.length === 0) {
+      // The rules' reading is held to the same form as an engine's, in case a rule ever
+      // reads something the form can't hold (DC-05 read a period that ran backwards).
+      const isWellFormed = organiserQuestionTask(events, today).schema.safeParse(reading.question).success;
+      if (reading.hasIntent && reading.unknownWords.length === 0 && isWellFormed) {
         setPending(null);
         remember({ text, question: reading.question, engine: null, unused: [] });
         return;

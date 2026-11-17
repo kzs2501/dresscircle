@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { OrganiserEventDto } from "@/contract/dto";
 import { writeOrderSearchParams } from "@/contract/queries";
 import type { OrderStatus, PaymentMethod } from "@/core/statuses";
+import { ApiError } from "@/lib/api-client";
 import { formatCount, formatPercent } from "@/lib/format";
 import { organiserQueries } from "@/lib/queries";
 import { routes } from "@/lib/routes";
@@ -97,9 +98,18 @@ function useAnswer(asked: Asked, events: readonly OrganiserEventDto[]) {
     enabled: needs.kind === "orders",
   });
   const answer = answerFor(asked.question, { events, metrics: metrics.data, orderCount: count.data });
-  const isFailed = answer === null && (metrics.isError || count.isError);
-  return { answer, isFailed };
+  const error = metrics.error ?? count.error;
+  return { answer, failure: answer === null && error ? failureOf(error) : null };
 }
+
+/**
+ * Why an answer's numbers couldn't be read: a refusal from the server says the server's
+ * reason, and only a failed connection asks the organiser to check theirs.
+ */
+export const failureOf = (error: Error) =>
+  error instanceof ApiError
+    ? `The server couldn’t answer this: ${error.problem.detail}`
+    : "Couldn’t load the numbers for this. Check your connection and ask again.";
 
 function Visual({ answer }: { answer: Answer }) {
   const id = useId();
@@ -187,13 +197,14 @@ export function AnswerCard({
   asked,
   answer,
   events,
-  isFailed = false,
+  failure = null,
   body,
 }: {
   asked: Asked;
   answer: Answer | null;
   events: readonly OrganiserEventDto[];
-  isFailed?: boolean;
+  /** Why the numbers couldn't be worked out, if they couldn't. */
+  failure?: string | null;
   /** In place of a sentence and a picture: what a request to refund answers with. */
   body?: ReactNode;
 }) {
@@ -226,8 +237,8 @@ export function AnswerCard({
             )}
             <Source answer={answer} events={events} />
           </>
-        ) : isFailed ? (
-          <p className="text-sm text-bad">Couldn’t load the numbers for this. Check your connection and ask again.</p>
+        ) : failure ? (
+          <p className="text-sm text-bad">{failure}</p>
         ) : (
           <Spinner label="Working out the answer" />
         ))}
@@ -236,8 +247,8 @@ export function AnswerCard({
 }
 
 function LiveAnswer({ asked, events }: { asked: Asked; events: readonly OrganiserEventDto[] }) {
-  const { answer, isFailed } = useAnswer(asked, events);
-  return <AnswerCard asked={asked} answer={answer} events={events} isFailed={isFailed} />;
+  const { answer, failure } = useAnswer(asked, events);
+  return <AnswerCard asked={asked} answer={answer} events={events} failure={failure} />;
 }
 
 /** The newest answer's sentence, for the panel's one live region. */

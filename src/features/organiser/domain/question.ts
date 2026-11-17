@@ -148,9 +148,11 @@ export function readQuestion(text: string, events: readonly QuestionEvent[], tod
 
   // The first period named wins; one that runs past today ends today.
   const range: { from: string | null; to: string | null } = { from: null, to: null };
+  // A period running past today ends today; one wholly ahead of today (a named month
+  // still to come) keeps its range, so it never runs backwards (DC-05).
   const period = (start: string, end: string) => {
     range.from ??= start;
-    range.to ??= earlier(end, today);
+    range.to ??= start > today ? end : earlier(end, today);
   };
   const thisWeek = shift(today, -weekday(today));
   if (take(/\btoday\b/u).length) period(today, today);

@@ -29,6 +29,9 @@ describe("answers from the dashboard's own numbers", () => {
     expect(twoDays?.sentence).toBe(
       "Across your events, 12 to 13 Nov 2026: 13 tickets, ₹13,000.00. The busiest day was 12 Nov 2026, with 7.",
     );
+    expect(answer({ intent: "sales-over-time", from: "2026-12-01", to: "2026-12-31" })?.sentence).toBe(
+      "Across your events, 1 to 31 Dec 2026: nothing yet, as that’s still to come.",
+    );
     expect(answer({ intent: "sales-over-time", from: "2026-11-08", to: "2026-11-08" })?.sentence).toBe(
       "Across your events, 8 Nov 2026: no tickets sold.",
     );

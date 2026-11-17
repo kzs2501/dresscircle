@@ -162,7 +162,9 @@ export function answerFor(
         : null;
     const sentence = busiest
       ? `${scope}, ${period}: ${formatCount(tickets)} ${tickets === 1 ? "ticket" : "tickets"}, ${formatMoney(revenue, metrics.currency)}. The busiest day was ${formatDay(busiest.date)}, with ${formatCount(busiest.tickets)}.`
-      : `${scope}, ${period}: no tickets sold.`;
+      : from > lastDay
+        ? `${scope}, ${period}: nothing yet, as that’s still to come.`
+        : `${scope}, ${period}: no tickets sold.`;
     return {
       sentence,
       visual: cut.length > 0 ? { kind: "sales-chart", metrics: { ...metrics, salesByDay: cut } } : { kind: "none" },
