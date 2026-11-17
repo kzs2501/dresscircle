@@ -285,6 +285,23 @@ test.describe("asking about your sales (ADR 026)", () => {
     await expect(answers(page).getByText(/^Across your events, you’ve sold /u)).toBeVisible();
   });
 
+  test("a stalled built-in model doesn't hold the assistant up (DC-02)", async ({ page, organiser }) => {
+    // Chrome's model says it's ready, then never answers, and ignores being given up on.
+    await page.addInitScript(() => {
+      Reflect.set(globalThis, "LanguageModel", {
+        availability: () => Promise.resolve("available"),
+        create: () => Promise.resolve({ prompt: () => new Promise(() => undefined), destroy: () => undefined }),
+      });
+    });
+    await page.route("**/ai/plan", (route) =>
+      route.fulfill({ json: { answer: { ...blank, intent: "ticket-types", event: "lakeside-lights" } } }),
+    );
+    await organiser.signInAs(/Nandini Rao/);
+    await ask(page, "which shows are doing well?");
+    await expect(answers(page).getByText("AI (free tier)")).toBeVisible({ timeout: 8_000 });
+    await expect(panel(page).getByRole("button", { name: "Ask" })).not.toHaveAttribute("aria-busy", "true");
+  });
+
   test("the box office may ask too: it only reads", async ({ page, organiser }) => {
     await organiser.signInAs(/Arjun Mehta/);
     await panel(page).getByRole("button", { name: "From reservation to payment" }).click();

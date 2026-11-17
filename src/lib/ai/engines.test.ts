@@ -66,6 +66,20 @@ describe("the on-device engine", () => {
   });
 });
 
+describe("the on-device engine, given up on", () => {
+  it("closes a session that arrives after its budget ran out (DC-02)", async () => {
+    const { api, session } = installModel();
+    const controller = new AbortController();
+    api.create.mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve(session);
+    });
+    await expect(onDeviceEngine.plan(task, "Goa", controller.signal)).rejects.toBeDefined();
+    expect(session.destroy).toHaveBeenCalled();
+    expect(session.prompt).not.toHaveBeenCalled();
+  });
+});
+
 describe("the cloud engine", () => {
   const ok = (body: unknown) => Promise.resolve(Response.json(body));
 
@@ -147,6 +161,32 @@ describe("asking the engines in order", () => {
       budgetMs: 10,
     });
     expect(result).toMatchObject({ ok: true, engine: "cloud" });
+  });
+
+  it("gives up on an engine that never answers, even one that ignores its budget (DC-02)", async () => {
+    const stuck = engine("on-device", () => new Promise(() => undefined));
+    const started = Date.now();
+    const result = await planWithEngines(task, "Goa", {
+      signal: signal(),
+      engines: [stuck, answers("Goa")],
+      budgetMs: 20,
+    });
+    expect(result).toMatchObject({ ok: true, engine: "cloud" });
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  it("stops at once when the person asks something else while an engine is stuck (DC-02)", async () => {
+    const controller = new AbortController();
+    const stuck = engine("on-device", () => new Promise(() => undefined));
+    setTimeout(() => {
+      controller.abort();
+    }, 10);
+    const result = await planWithEngines(task, "Goa", {
+      signal: controller.signal,
+      engines: [stuck, answers("Goa")],
+      budgetMs: 60_000,
+    });
+    expect(result).toEqual({ ok: false, isAborted: true, failures: {} });
   });
 
   it("stops when the person asks something else", async () => {

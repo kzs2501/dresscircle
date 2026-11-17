@@ -109,6 +109,31 @@ test.describe("a search in your own words (ADR 025)", () => {
     },
   );
 
+  for (const stalls of ["availability", "create", "prompt"] as const) {
+    test(
+      `hands over to the next engine when Chrome's built-in model stalls in ${stalls} (DC-02)`,
+      { tag: "@both" },
+      async ({ page }) => {
+        // The model never answers, and ignores being given up on.
+        await page.addInitScript((where) => {
+          const never = () => new Promise(() => undefined);
+          Reflect.set(globalThis, "LanguageModel", {
+            availability: () => (where === "availability" ? never() : Promise.resolve("available")),
+            create: () => (where === "create" ? never() : Promise.resolve({ prompt: never, destroy: () => undefined })),
+          });
+        }, stalls);
+        await page.route("**/ai/plan", (route) =>
+          route.fulfill({ json: { answer: aiAnswer({ category: "music", city: "Goa" }) } }),
+        );
+        await page.goto("/");
+        await searchBox(page).fill("something mellow by the sea");
+        await searchBox(page).press("Enter");
+        await expect(page.getByText("Understood as Music · Goa.")).toBeVisible({ timeout: 8_000 });
+        await expect(page.getByText("AI (free tier)")).toBeVisible();
+      },
+    );
+  }
+
   test(
     "keeps the rules' reading when no engine can answer, and says what it didn't use",
     { tag: "@both" },

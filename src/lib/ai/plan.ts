@@ -15,6 +15,31 @@ export type PlanResult<Answer> =
 /** Long enough for a small model to fill in a small form; two of them still under eight seconds. */
 export const ENGINE_BUDGET_MS = 4_000;
 
+/**
+ * An engine's answer, or its signal's reason once that fires: an engine that never
+ * answers, or ignores its signal (a stalled built-in model can do both), can't hold up the
+ * next one. A late answer is ignored.
+ */
+function untilAborted<Answer>(work: Promise<Answer>, signal: AbortSignal): Promise<Answer> {
+  if (signal.aborted) return Promise.reject(signal.reason as Error);
+  return new Promise<Answer>((resolve, reject) => {
+    const giveUp = () => {
+      reject(signal.reason as Error);
+    };
+    signal.addEventListener("abort", giveUp, { once: true });
+    work.then(
+      (answer) => {
+        signal.removeEventListener("abort", giveUp);
+        resolve(answer);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", giveUp);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
+}
+
 export async function planWithEngines<Answer>(
   task: AiTask<Answer>,
   request: string,
@@ -30,7 +55,8 @@ export async function planWithEngines<Answer>(
   for (const engine of engines) {
     if (isAborted()) return { ok: false, isAborted: true, failures };
     try {
-      const answer = await engine.plan(task, request, AbortSignal.any([signal, AbortSignal.timeout(budgetMs)]));
+      const budget = AbortSignal.any([signal, AbortSignal.timeout(budgetMs)]);
+      const answer = await untilAborted(engine.plan(task, request, budget), budget);
       return { ok: true, answer, engine: engine.name };
     } catch (error) {
       if (isAborted()) return { ok: false, isAborted: true, failures };

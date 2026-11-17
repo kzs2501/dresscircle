@@ -53,6 +53,11 @@ export const onDeviceEngine: Engine = {
       signal,
       initialPrompts: [{ role: "system", content: task.instructions }, ...exampleTurns(task)],
     });
+    // Given up on while the model was starting: close what it started, ask nothing.
+    if (signal.aborted) {
+      session.destroy();
+      throw new EngineUnavailableError("The built-in model took too long to start.");
+    }
     try {
       const reply = await session.prompt(request, { responseConstraint: task.jsonSchema, signal });
       return task.schema.parse(JSON.parse(reply));
