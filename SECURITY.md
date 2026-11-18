@@ -92,8 +92,12 @@ mode, `/api/*` is a real server on Postgres, and everything below applies.
 
 ## Dependencies
 
-- **What ships has no known vulnerabilities.** CI runs `npm audit --omit=dev
---audit-level=high` on every change, and Dependabot proposes updates weekly.
+- **What ships has no known vulnerabilities.** CI audits the production dependencies on
+  every change (`scripts/audit-production.mjs`) and fails on any high or critical
+  advisory, and Dependabot proposes updates weekly. An advisory that can't apply here,
+  and has no fix yet, is listed in the script with the reason and when to remove it:
+  today, one picomatch ReDoS reached only through vite, an optional peer of msw that
+  nothing loads at runtime.
 - **Development tools are patched where a fix exists.** `overrides` in `package.json`
   pins patched versions deep in the Lighthouse CI chain (`basic-ftp`, `tmp`, `uuid`),
   and a current `esbuild` under `drizzle-kit`'s config loader, where the tools that use
